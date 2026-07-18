@@ -1,0 +1,28 @@
+{
+  "recipientName": "fata mea misterioasa",
+  "senderName": "Cata",
+  "eventDateISO": "2026-07-25T13:00:00+03:00",
+  "website": {
+    "introLine": "Am o mica taina pentru tine.",
+    "tapPrompt": "Atinge ecranul ca sa continui",
+    "revealSteps": [
+      "Exista un loc in Bucuresti pe care inca nu l-ai vazut.",
+      "L-am gasit gandindu-ma la tine.",
+      "Nu iti spun ce e, nici unde e. Doar atat: pregateste-te.",
+      "Tot ce trebuie sa stii acum e o data si o ora."
+    ],
+    "countdownLabel": "Pana atunci, mai avem de asteptat:",
+    "countdownCompleteLabel": "E acum. Te astept."
+  },
+  "email": {
+    "subject": "O invitatie... misterioasa",
+    "preheader": "Nu iti spun tot. Doar atat: rezerva-ti 25 iulie.",
+    "bodyParagraphs": [
+      "Buna, fata mea misterioasa,",
+      "Am pregatit ceva pentru tine, dar nu iti spun ce e. Stiu doar ca vreau sa fii acolo.",
+      "Tot ce trebuie sa faci acum e sa deschizi surpriza si sa numeri zilele impreuna cu mine."
+    ],
+    "ctaText": "Deschide surpriza",
+    "ctaUrl": "https://exemplu-schimba-dupa-deploy.vercel.app"
+  }
+}
