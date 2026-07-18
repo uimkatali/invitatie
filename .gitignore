@@ -2,3 +2,7 @@ node_modules/
 .next/
 email/invite-email.html
 .env*.local
+*.tsbuildinfo
+.vercel/
+.DS_Store
+Thumbs.db
