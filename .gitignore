@@ -1,0 +1,4 @@
+node_modules/
+.next/
+email/invite-email.html
+.env*.local
