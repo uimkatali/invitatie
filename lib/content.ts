@@ -25,7 +25,7 @@ export interface InviteContent {
 }
 
 export function getContent(): InviteContent {
-  return contentData as InviteContent;
+  return contentData;
 }
 
 export function validateContent(content: InviteContent): string[] {
@@ -38,12 +38,20 @@ export function validateContent(content: InviteContent): string[] {
   } else if (Number.isNaN(Date.parse(content.eventDateISO))) {
     errors.push('eventDateISO must be a valid ISO date string');
   }
+  if (!content.website?.introLine) errors.push('website.introLine is required');
+  if (!content.website?.tapPrompt) errors.push('website.tapPrompt is required');
   if (!content.website?.revealSteps?.length) {
     errors.push('website.revealSteps must have at least one entry');
   }
+  if (!content.website?.countdownLabel) errors.push('website.countdownLabel is required');
+  if (!content.website?.countdownCompleteLabel) errors.push('website.countdownCompleteLabel is required');
+  if (!content.email?.subject) errors.push('email.subject is required');
+  if (!content.email?.preheader) errors.push('email.preheader is required');
   if (!content.email?.bodyParagraphs?.length) {
     errors.push('email.bodyParagraphs must have at least one entry');
   }
+  if (!content.email?.ctaText) errors.push('email.ctaText is required');
+  if (!content.email?.ctaUrl) errors.push('email.ctaUrl is required');
 
   return errors;
 }

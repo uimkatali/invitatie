@@ -33,6 +33,16 @@ describe('validateContent', () => {
     expect(validateContent(content)).toContain('recipientName is required');
   });
 
+  it('flags a missing senderName', () => {
+    const content = { ...makeValidContent(), senderName: '' };
+    expect(validateContent(content)).toContain('senderName is required');
+  });
+
+  it('flags a missing eventDateISO', () => {
+    const content = { ...makeValidContent(), eventDateISO: '' };
+    expect(validateContent(content)).toContain('eventDateISO is required');
+  });
+
   it('flags an invalid eventDateISO', () => {
     const content = { ...makeValidContent(), eventDateISO: 'not-a-date' };
     expect(validateContent(content)).toContain('eventDateISO must be a valid ISO date string');
@@ -43,9 +53,52 @@ describe('validateContent', () => {
     expect(validateContent(content)).toContain('website.revealSteps must have at least one entry');
   });
 
+  it('handles a missing website object without throwing', () => {
+    const content = { ...makeValidContent(), website: undefined as any };
+    const errors = validateContent(content);
+    expect(() => validateContent(content)).not.toThrow();
+    expect(errors).toContain('website.revealSteps must have at least one entry');
+  });
+
   it('flags empty email.bodyParagraphs', () => {
     const content = { ...makeValidContent(), email: { ...makeValidContent().email, bodyParagraphs: [] } };
     expect(validateContent(content)).toContain('email.bodyParagraphs must have at least one entry');
+  });
+
+  it('handles a missing email object without throwing', () => {
+    const content = { ...makeValidContent(), email: undefined as any };
+    const errors = validateContent(content);
+    expect(() => validateContent(content)).not.toThrow();
+    expect(errors).toContain('email.bodyParagraphs must have at least one entry');
+  });
+
+  it('flags all newly-required leaf string fields when blanked out', () => {
+    const content = {
+      ...makeValidContent(),
+      website: {
+        ...makeValidContent().website,
+        introLine: '',
+        tapPrompt: '',
+        countdownLabel: '',
+        countdownCompleteLabel: '',
+      },
+      email: {
+        ...makeValidContent().email,
+        subject: '',
+        preheader: '',
+        ctaText: '',
+        ctaUrl: '',
+      },
+    };
+    const errors = validateContent(content);
+    expect(errors).toContain('website.introLine is required');
+    expect(errors).toContain('website.tapPrompt is required');
+    expect(errors).toContain('website.countdownLabel is required');
+    expect(errors).toContain('website.countdownCompleteLabel is required');
+    expect(errors).toContain('email.subject is required');
+    expect(errors).toContain('email.preheader is required');
+    expect(errors).toContain('email.ctaText is required');
+    expect(errors).toContain('email.ctaUrl is required');
   });
 });
 
