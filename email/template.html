@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{subject}}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#2a1f3d;">
+  <div style="display:none; max-height:0; overflow:hidden; font-size:1px; color:#2a1f3d;">{{preheader}}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#2a1f3d;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#5b4a7a; border-radius:12px; overflow:hidden;">
+          <tr>
+            <td style="padding:32px 28px; font-family:Georgia, 'Times New Roman', serif; color:#fdf0e0;">
+              <p style="margin:0 0 20px; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:#ffb6c9;">Pentru {{recipientName}}</p>
+              {{bodyHtml}}
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
+                <tr>
+                  <td align="center" bgcolor="#7fc4e8" style="border-radius:8px;">
+                    <a href="{{ctaUrl}}" style="display:inline-block; padding:14px 28px; font-family:Arial, sans-serif; font-size:15px; font-weight:bold; color:#2a1f3d; text-decoration:none; border-radius:8px;">{{ctaText}}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0; font-size:14px; color:#fdf0e0;">Cu drag,<br>{{senderName}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
