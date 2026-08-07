@@ -103,6 +103,13 @@ html, body {
 
 .reveal { cursor: pointer; }
 
+.reveal-intro {
+  font-size: 0.9rem;
+  opacity: 0.75;
+  margin-bottom: 1rem;
+  text-transform: none;
+}
+
 .reveal-text {
   font-size: 1.4rem;
   max-width: 32ch;

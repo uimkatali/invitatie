@@ -5,13 +5,21 @@ import dynamic from 'next/dynamic';
 import RevealMessage from '../components/RevealMessage';
 import Countdown from '../components/Countdown';
 import LoginGate from '../components/LoginGate';
-import { getContent } from '../lib/content';
+import { getContent, validateContent } from '../lib/content';
 import { getThemeForMonth } from '../lib/theme';
 
 const AlienScene = dynamic(() => import('../components/AlienScene'), { ssr: false });
 
 export default function Home() {
   const content = getContent();
+
+  if (process.env.NODE_ENV !== 'production') {
+    const contentErrors = validateContent(content);
+    if (contentErrors.length > 0) {
+      console.error('content.json has validation errors:', contentErrors);
+    }
+  }
+
   const [revealed, setRevealed] = useState(false);
   const theme = useMemo(() => getThemeForMonth(new Date().getMonth() + 1), []);
 
@@ -43,6 +51,7 @@ export default function Home() {
             <RevealMessage
               steps={content.website.revealSteps}
               tapPrompt={content.website.tapPrompt}
+              introLine={content.website.introLine}
               onComplete={() => setRevealed(true)}
             />
           ) : (
