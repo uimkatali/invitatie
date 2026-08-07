@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { checkCredentials } from '../lib/auth';
 
+// Client-side password screen — NOT real security (see lib/auth.ts). Deters casual visitors only.
 interface LoginGateProps {
   title: string;
   hint: string;
@@ -34,7 +35,7 @@ export default function LoginGate({
   const [showError, setShowError] = useState(false);
 
   useEffect(() => {
-    if (window.sessionStorage.getItem(STORAGE_KEY) === 'true') {
+    if (window.localStorage.getItem(STORAGE_KEY) === 'true') {
       setUnlocked(true);
     }
   }, []);
@@ -42,7 +43,7 @@ export default function LoginGate({
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (checkCredentials(username, password, expectedUsername, expectedPassword)) {
-      window.sessionStorage.setItem(STORAGE_KEY, 'true');
+      window.localStorage.setItem(STORAGE_KEY, 'true');
       setUnlocked(true);
       setShowError(false);
     } else {

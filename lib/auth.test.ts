@@ -21,4 +21,8 @@ describe('checkCredentials', () => {
   it('returns false for a wrong password', () => {
     expect(checkCredentials('fatamisterioasa', 'gresit', 'fatamisterioasa', 'elefant123')).toBe(false);
   });
+
+  it('returns false for empty username and password', () => {
+    expect(checkCredentials('', '', 'fatamisterioasa', 'elefant123')).toBe(false);
+  });
 });
