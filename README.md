@@ -28,10 +28,13 @@ Dupa orice modificare in `content.json`, ruleaza `npm run build:email` din nou c
 
 ## Deploy (Vercel prin GitHub)
 
+Dupa ce editezi `content.json`, nu uita sa faci commit (`git add -A && git commit -m "personalizare"`) inainte de push.
+
 1. Creeaza un repo nou pe GitHub (gol, fara README).
 2. Din acest folder:
    ```bash
    git remote add origin <url-ul-repo-ului-tau>
+   git branch -M main
    git push -u origin main
    ```
 3. Pe [vercel.com](https://vercel.com), "Add New Project" -> importa repo-ul din GitHub -> Deploy (Vercel detecteaza Next.js automat, nu trebuie configurat nimic).
