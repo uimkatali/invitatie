@@ -20,6 +20,16 @@ function makeValidContent(): InviteContent {
       ctaText: 'buton',
       ctaUrl: 'https://example.com',
     },
+    login: {
+      title: 'titlu',
+      hint: 'indiciu',
+      usernameLabel: 'utilizator',
+      passwordLabel: 'parola',
+      submitText: 'intra',
+      errorText: 'gresit',
+      expectedUsername: 'fatamisterioasa',
+      expectedPassword: 'elefant123',
+    },
   };
 }
 
@@ -99,6 +109,32 @@ describe('validateContent', () => {
     expect(errors).toContain('email.preheader is required');
     expect(errors).toContain('email.ctaText is required');
     expect(errors).toContain('email.ctaUrl is required');
+  });
+
+  it('flags all newly-required login.* fields when blanked out', () => {
+    const content = {
+      ...makeValidContent(),
+      login: {
+        ...makeValidContent().login,
+        title: '',
+        hint: '',
+        usernameLabel: '',
+        passwordLabel: '',
+        submitText: '',
+        errorText: '',
+        expectedUsername: '',
+        expectedPassword: '',
+      },
+    };
+    const errors = validateContent(content);
+    expect(errors).toContain('login.title is required');
+    expect(errors).toContain('login.hint is required');
+    expect(errors).toContain('login.usernameLabel is required');
+    expect(errors).toContain('login.passwordLabel is required');
+    expect(errors).toContain('login.submitText is required');
+    expect(errors).toContain('login.errorText is required');
+    expect(errors).toContain('login.expectedUsername is required');
+    expect(errors).toContain('login.expectedPassword is required');
   });
 });
 

@@ -24,5 +24,15 @@
     ],
     "ctaText": "Deschide surpriza",
     "ctaUrl": "https://exemplu-schimba-dupa-deploy.vercel.app"
+  },
+  "login": {
+    "title": "Acces secret",
+    "hint": "Doar tu stii codul...",
+    "usernameLabel": "Utilizator",
+    "passwordLabel": "Parola",
+    "submitText": "Intra",
+    "errorText": "Hmm, nu e chiar asta. Mai incearca.",
+    "expectedUsername": "fatamisterioasa",
+    "expectedPassword": "elefant123"
   }
 }
