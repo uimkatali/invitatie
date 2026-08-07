@@ -102,3 +102,34 @@ html, body { height: 100%; }
   font-size: 0.8rem;
   color: var(--color-accent-pink, #ffb6c9);
 }
+
+.reveal {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  cursor: pointer;
+}
+
+.reveal-text {
+  font-size: 1.4rem;
+  max-width: 32ch;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.reveal-prompt {
+  font-size: 0.85rem;
+  color: #ffb6c9;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 480px) {
+  .reveal-text { font-size: 1.15rem; }
+}
