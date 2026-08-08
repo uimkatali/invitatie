@@ -21,7 +21,15 @@
   --admin-font: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
     'Liberation Mono', monospace;
 
-  min-height: 100vh;
+  /* Bounded to the viewport with its own scrollbar: the shared root layout's
+   * html/body get `overflow: hidden` from app/globals.css (required by the
+   * public site's fixed 3D scene). That rule cascades to /admin/* too, so
+   * without this the admin shell would silently clip any content taller
+   * than the viewport instead of scrolling. Scoping height + overflow-y to
+   * this class keeps the fix local to /admin/* — html/body and the public
+   * site's own scroll behavior are untouched. */
+  height: 100vh;
+  overflow-y: auto;
   background: var(--admin-bg);
   color: var(--admin-text);
   font-family: var(--admin-font);
