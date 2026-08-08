@@ -55,4 +55,45 @@ describe('validateSettings', () => {
       'emailBodyParagraphs must have at least one entry'
     );
   });
+
+  it('flags all remaining required string fields when blanked out', () => {
+    const settings = {
+      ...makeValidSettings(),
+      senderName: '',
+      websiteTapPrompt: '',
+      websiteCountdownLabel: '',
+      websiteCountdownCompleteLabel: '',
+      emailSubject: '',
+      emailPreheader: '',
+      emailCtaText: '',
+      emailCtaUrl: '',
+      loginTitle: '',
+      loginHint: '',
+      loginUsernameLabel: '',
+      loginPasswordLabel: '',
+      loginSubmitText: '',
+      loginErrorText: '',
+      loginExpectedUsername: '',
+      loginExpectedPassword: '',
+      activeThemeId: '',
+    };
+    const errors = validateSettings(settings);
+    expect(errors).toContain('senderName is required');
+    expect(errors).toContain('websiteTapPrompt is required');
+    expect(errors).toContain('websiteCountdownLabel is required');
+    expect(errors).toContain('websiteCountdownCompleteLabel is required');
+    expect(errors).toContain('emailSubject is required');
+    expect(errors).toContain('emailPreheader is required');
+    expect(errors).toContain('emailCtaText is required');
+    expect(errors).toContain('emailCtaUrl is required');
+    expect(errors).toContain('loginTitle is required');
+    expect(errors).toContain('loginHint is required');
+    expect(errors).toContain('loginUsernameLabel is required');
+    expect(errors).toContain('loginPasswordLabel is required');
+    expect(errors).toContain('loginSubmitText is required');
+    expect(errors).toContain('loginErrorText is required');
+    expect(errors).toContain('loginExpectedUsername is required');
+    expect(errors).toContain('loginExpectedPassword is required');
+    expect(errors).toContain('activeThemeId is required');
+  });
 });
