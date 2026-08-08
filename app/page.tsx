@@ -1,70 +1,14 @@
-'use client';
+import { getPublicSettings } from '../lib/get-public-settings';
+import { getThemeForId } from '../lib/themes';
+import HomeClient from '../components/HomeClient';
 
-import { useMemo, useState, type CSSProperties } from 'react';
-import dynamic from 'next/dynamic';
-import RevealMessage from '../components/RevealMessage';
-import Countdown from '../components/Countdown';
-import LoginGate from '../components/LoginGate';
-import { getContent, validateContent } from '../lib/content';
-import { getThemeForMonth } from '../lib/theme';
+// Settings live in the database and can change at any time via the admin panel;
+// force-dynamic also avoids build-time prerendering trying to hit the DB.
+export const dynamic = 'force-dynamic';
 
-const AlienScene = dynamic(() => import('../components/AlienScene'), { ssr: false });
+export default async function Home() {
+  const settings = await getPublicSettings();
+  const theme = getThemeForId(settings.activeThemeId, settings.themeColorOverrides);
 
-export default function Home() {
-  const content = getContent();
-
-  if (process.env.NODE_ENV !== 'production') {
-    const contentErrors = validateContent(content);
-    if (contentErrors.length > 0) {
-      console.error('content.json has validation errors:', contentErrors);
-    }
-  }
-
-  const [revealed, setRevealed] = useState(false);
-  const theme = useMemo(() => getThemeForMonth(new Date().getMonth() + 1), []);
-
-  const themeStyle = {
-    '--color-bg-dark': theme.colors.bgDark,
-    '--color-bg-mid': theme.colors.bgMid,
-    '--color-accent-blue': theme.colors.accentPrimary,
-    '--color-accent-pink': theme.colors.accentSecondary,
-    '--color-cream': theme.colors.cream,
-  } as CSSProperties;
-
-  return (
-    <div style={themeStyle}>
-      <LoginGate
-        title={content.login.title}
-        hint={content.login.hint}
-        usernameLabel={content.login.usernameLabel}
-        passwordLabel={content.login.passwordLabel}
-        submitText={content.login.submitText}
-        errorText={content.login.errorText}
-        expectedUsername={content.login.expectedUsername}
-        expectedPassword={content.login.expectedPassword}
-      >
-        <main>
-          <div className="scene-container">
-            <AlienScene bgColor={theme.colors.bgDark} accentColor={theme.colors.accentPrimary} />
-          </div>
-          {!revealed ? (
-            <RevealMessage
-              steps={content.website.revealSteps}
-              tapPrompt={content.website.tapPrompt}
-              introLine={content.website.introLine}
-              onComplete={() => setRevealed(true)}
-            />
-          ) : (
-            <div className="countdown-wrap">
-              <Countdown
-                targetISO={content.eventDateISO}
-                label={content.website.countdownLabel}
-                completeLabel={content.website.countdownCompleteLabel}
-              />
-            </div>
-          )}
-        </main>
-      </LoginGate>
-    </div>
-  );
+  return <HomeClient settings={settings} theme={theme} />;
 }
