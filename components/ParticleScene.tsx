@@ -221,8 +221,10 @@ function Particle({
         break;
       }
       case 'swirl': {
-        const r = instance.radius;
+        // Radius breathes in/out over time (unlike `orbit`'s fixed radius) so the
+        // path traces a genuine expanding/contracting spiral rather than a circle.
         const swirlT = t * 0.5;
+        const r = instance.radius * (0.55 + 0.45 * Math.sin(swirlT * 0.35));
         group.current.position.set(Math.cos(swirlT) * r, base[1] + Math.sin(swirlT * 1.3) * 0.6, Math.sin(swirlT) * r);
         group.current.rotation.z = swirlT;
         group.current.rotation.x = swirlT * 0.4;
