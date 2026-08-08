@@ -166,6 +166,125 @@
   max-width: 60ch;
 }
 
+/* Settings forms (ContentTab, DateTab) */
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.admin-field--block {
+  width: 100%;
+}
+
+.admin-field--block input,
+.admin-field--block textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 3px;
+  color: var(--admin-text);
+  resize: vertical;
+}
+
+.admin-field--block input:focus,
+.admin-field--block textarea:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+}
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-list-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-list-row input {
+  flex: 1;
+}
+
+.admin-list-remove {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  border-radius: 3px;
+  color: var(--admin-text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-list-remove:hover:not(:disabled) {
+  border-color: var(--admin-danger);
+  color: var(--admin-danger);
+}
+
+.admin-list-remove:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.admin-list-add {
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px dashed var(--admin-border);
+  border-radius: 3px;
+  padding: 0.45rem 0.8rem;
+  color: var(--admin-text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-list-add:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+.admin-form-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-form-success {
+  font-size: 0.8rem;
+  color: var(--admin-accent);
+}
+
+.admin-form-error {
+  font-size: 0.8rem;
+  color: var(--admin-danger);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 /* Login page */
 
 .admin-login {
