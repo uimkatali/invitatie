@@ -4,7 +4,8 @@ import { verifySessionToken } from './lib/session';
 export async function middleware(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname === '/admin/login';
   const isLoginApi = request.nextUrl.pathname === '/api/admin/login';
-  if (isLoginPage || isLoginApi) {
+  const isSessionApi = request.nextUrl.pathname === '/api/admin/session';
+  if (isLoginPage || isLoginApi || isSessionApi) {
     return NextResponse.next();
   }
 

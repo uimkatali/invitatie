@@ -20,4 +20,16 @@ describe('createSessionToken / verifySessionToken', () => {
     const result = await verifySessionToken('not-a-real-token', SECRET);
     expect(result.valid).toBe(false);
   });
+
+  it('rejects an expired token', async () => {
+    const { SignJWT } = await import('jose');
+    const key = new TextEncoder().encode(SECRET);
+    const expiredToken = await new SignJWT({ admin: true })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt(Math.floor(Date.now() / 1000) - 1000)
+      .setExpirationTime(Math.floor(Date.now() / 1000) - 500) // expired 500s ago
+      .sign(key);
+    const result = await verifySessionToken(expiredToken, SECRET);
+    expect(result.valid).toBe(false);
+  });
 });
