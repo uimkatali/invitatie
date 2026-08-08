@@ -18,7 +18,7 @@
   --admin-text-dim: #8d8d97;
   --admin-accent: #f5a623;
   --admin-danger: #e5484d;
-  --admin-font: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+  --admin-font: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
     'Liberation Mono', monospace;
 
   /* Bounded to the viewport with its own scrollbar: the shared root layout's
@@ -64,6 +64,17 @@
 .admin-header-mark {
   color: var(--admin-accent);
   margin-right: 0.5rem;
+}
+
+.admin-logout-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-logout-error {
+  font-size: 0.72rem;
+  color: var(--admin-danger);
 }
 
 .admin-logout {
