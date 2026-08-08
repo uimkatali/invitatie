@@ -6,13 +6,13 @@ import RevealMessage from './RevealMessage';
 import Countdown from './Countdown';
 import LoginGate from './LoginGate';
 import type { PublicSettings } from '../lib/get-public-settings';
-import type { ThemeColors } from '../lib/themes';
+import type { ResolvedTheme } from '../lib/themes';
 
-const AlienScene = dynamic(() => import('./AlienScene'), { ssr: false });
+const ParticleScene = dynamic(() => import('./ParticleScene'), { ssr: false });
 
 interface HomeClientProps {
   settings: PublicSettings;
-  theme: { colors: ThemeColors };
+  theme: ResolvedTheme;
 }
 
 export default function HomeClient({ settings, theme }: HomeClientProps) {
@@ -40,7 +40,7 @@ export default function HomeClient({ settings, theme }: HomeClientProps) {
       >
         <main>
           <div className="scene-container">
-            <AlienScene bgColor={theme.colors.bgDark} accentColor={theme.colors.accentPrimary} />
+            <ParticleScene theme={theme} />
           </div>
           {!revealed ? (
             <RevealMessage
