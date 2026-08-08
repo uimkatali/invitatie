@@ -17,4 +17,14 @@ describe('hashPassword/verifyPassword', () => {
     const hashB = await hashPassword('elefant123');
     expect(hashA).not.toBe(hashB);
   });
+
+  it('returns false for a malformed/non-bcrypt hash rather than throwing', async () => {
+    await expect(verifyPassword('anything', 'not-a-real-hash')).resolves.toBe(false);
+  });
+
+  it('hashes and verifies an empty-string password correctly', async () => {
+    const hash = await hashPassword('');
+    expect(await verifyPassword('', hash)).toBe(true);
+    expect(await verifyPassword('not-empty', hash)).toBe(false);
+  });
 });
