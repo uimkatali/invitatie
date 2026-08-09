@@ -21,6 +21,13 @@ export interface PublicSettings {
     expectedUsername: string;
     expectedPassword: string;
   };
+  email: {
+    subject: string;
+    preheader: string;
+    bodyParagraphs: string[];
+    ctaText: string;
+    ctaUrl: string;
+  };
   activeThemeId: string;
   themeColorOverrides: Record<string, string> | null;
 }
@@ -46,6 +53,13 @@ export function mapSettingsRow(row: any): PublicSettings {
       errorText: row.login_error_text,
       expectedUsername: row.login_expected_username,
       expectedPassword: row.login_expected_password,
+    },
+    email: {
+      subject: row.email_subject,
+      preheader: row.email_preheader,
+      bodyParagraphs: row.email_body_paragraphs,
+      ctaText: row.email_cta_text,
+      ctaUrl: row.email_cta_url,
     },
     activeThemeId: row.active_theme_id,
     themeColorOverrides: row.theme_color_overrides,

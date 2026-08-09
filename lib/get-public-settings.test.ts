@@ -20,6 +20,11 @@ describe('mapSettingsRow', () => {
       login_error_text: 'gresit',
       login_expected_username: 'fatamisterioasa',
       login_expected_password: 'elefant123',
+      email_subject: 'O invitatie speciala',
+      email_preheader: 'Ceva te asteapta',
+      email_body_paragraphs: ['paragraf 1', 'paragraf 2'],
+      email_cta_text: 'Deschide',
+      email_cta_url: 'https://example.com',
       active_theme_id: 'alien-field',
       theme_color_overrides: null,
     };
@@ -29,6 +34,8 @@ describe('mapSettingsRow', () => {
     expect(mapped.eventDateIso).toBe('2026-07-25T13:00:00+03:00');
     expect(mapped.website.revealSteps).toEqual(['pas 1', 'pas 2']);
     expect(mapped.login.expectedUsername).toBe('fatamisterioasa');
+    expect(mapped.email.subject).toBe('O invitatie speciala');
+    expect(mapped.email.bodyParagraphs).toEqual(['paragraf 1', 'paragraf 2']);
     expect(mapped.activeThemeId).toBe('alien-field');
   });
 });
