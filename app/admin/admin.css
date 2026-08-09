@@ -199,6 +199,33 @@
   border-color: var(--admin-accent);
 }
 
+.admin-field-group-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.6rem;
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-field-group-heading {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--admin-accent);
+  margin: 0;
+}
+
+.admin-field-group-hint {
+  font-size: 0.76rem;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.5;
+  color: var(--admin-text-dim);
+  margin: 0;
+  max-width: 60ch;
+}
+
 .admin-list {
   display: flex;
   flex-direction: column;

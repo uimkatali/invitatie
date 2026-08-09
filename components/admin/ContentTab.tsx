@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { SettingsRow } from '../../lib/settings';
 import { useSettings } from '../../app/admin/settings-context';
 
@@ -107,21 +107,33 @@ export default function ContentTab() {
   return (
     <div className="admin-form">
       {TEXT_FIELDS.map(({ key, label, multiline }) => (
-        <label key={key} className="admin-field admin-field--block">
-          <span>{label}</span>
-          {multiline ? (
-            <textarea
-              value={settings[key] as string}
-              onChange={(event) => updateField(key, event.target.value)}
-              rows={3}
-            />
-          ) : (
-            <input
-              value={settings[key] as string}
-              onChange={(event) => updateField(key, event.target.value)}
-            />
+        <Fragment key={key}>
+          {key === 'loginTitle' && (
+            <div key="login-fields-heading" className="admin-field-group-header">
+              <h3 className="admin-field-group-heading">Ecran de login al destinatarei</h3>
+              <p className="admin-field-group-hint">
+                Acestea sunt pentru ecranul de parola pe care il vede persoana invitata pe site-ul
+                public — nu afecteaza contul tau de admin (acela se schimba din variabilele de
+                mediu ADMIN_USERNAME/ADMIN_PASSWORD).
+              </p>
+            </div>
           )}
-        </label>
+          <label className="admin-field admin-field--block">
+            <span>{label}</span>
+            {multiline ? (
+              <textarea
+                value={settings[key] as string}
+                onChange={(event) => updateField(key, event.target.value)}
+                rows={3}
+              />
+            ) : (
+              <input
+                value={settings[key] as string}
+                onChange={(event) => updateField(key, event.target.value)}
+              />
+            )}
+          </label>
+        </Fragment>
       ))}
 
       {ARRAY_FIELDS.map(({ key, label }) => (
