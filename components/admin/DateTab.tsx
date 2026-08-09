@@ -1,69 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { SettingsRow } from '../../lib/settings';
-
-// Matches e.g. "2026-07-25T13:00:00+03:00" -> date, time (HH:MM) and offset
-// ("+03:00" or "Z"). We deliberately keep the original offset around instead
-// of letting the browser reinterpret the instant in its own timezone: an
-// admin in a different timezone than the event should still see and edit
-// the wall-clock time that was stored, and save it back with that same
-// offset untouched.
-const ISO_PATTERN = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$/;
-
-function parseIso(iso: string): { localValue: string; offset: string } {
-  const match = ISO_PATTERN.exec(iso);
-  if (!match) {
-    return { localValue: '', offset: '+00:00' };
-  }
-  const [, datePart, timePart, offsetPart] = match;
-  return { localValue: `${datePart}T${timePart}`, offset: offsetPart ?? '+00:00' };
-}
-
-function toIsoWithOffset(localValue: string, offset: string): string {
-  // localValue is "YYYY-MM-DDTHH:MM" from the datetime-local input.
-  return `${localValue}:00${offset === 'Z' ? 'Z' : offset}`;
-}
+import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '../../app/admin/settings-context';
+import { parseIso, toIsoWithOffset } from '../../lib/date-offset';
 
 export default function DateTab() {
-  const [settings, setSettings] = useState<SettingsRow | null>(null);
-  const [localValue, setLocalValue] = useState('');
-  const [offset, setOffset] = useState('+00:00');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { settings, setSettings, loading, loadError } = useSettings();
+  const [localValue, setLocalValue] = useState(() => parseIso(settings?.eventDateIso ?? '').localValue);
+  const [offset, setOffset] = useState(() => parseIso(settings?.eventDateIso ?? '').offset);
   const [saving, setSaving] = useState(false);
   const [saveErrors, setSaveErrors] = useState<string[] | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // The shared settings object is fetched once at the provider level and may
+  // still be loading when this tab first mounts. Derive the local editing
+  // state (localValue/offset) from it the moment it becomes available, but
+  // only once per mount — after that, this tab's own edits (written into the
+  // shared settings via setSettings below) are the source of truth, so we
+  // must not let this effect re-derive and clobber in-progress typing.
+  const initializedRef = useRef(settings !== null);
   useEffect(() => {
-    let cancelled = false;
+    if (initializedRef.current || !settings) return;
+    const parsed = parseIso(settings.eventDateIso);
+    setLocalValue(parsed.localValue);
+    setOffset(parsed.offset);
+    initializedRef.current = true;
+  }, [settings]);
 
-    async function load() {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const response = await fetch('/api/admin/settings');
-        if (!response.ok) {
-          throw new Error('Nu s-au putut incarca setarile.');
-        }
-        const data: SettingsRow = await response.json();
-        if (cancelled) return;
-        setSettings(data);
-        const parsed = parseIso(data.eventDateIso);
-        setLocalValue(parsed.localValue);
-        setOffset(parsed.offset);
-      } catch {
-        if (!cancelled) setLoadError('Nu s-au putut incarca setarile. Incearca din nou.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  function handleLocalValueChange(value: string) {
+    setLocalValue(value);
+    if (!value) return;
+    const nextIso = toIsoWithOffset(value, offset);
+    setSettings((prev) => (prev ? { ...prev, eventDateIso: nextIso } : prev));
+  }
 
   async function handleSave() {
     if (!settings || !localValue) return;
@@ -71,13 +40,11 @@ export default function DateTab() {
     setSaveErrors(null);
     setSaveSuccess(false);
 
-    const updated: SettingsRow = { ...settings, eventDateIso: toIsoWithOffset(localValue, offset) };
-
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
+        body: JSON.stringify(settings),
       });
 
       if (!response.ok) {
@@ -86,7 +53,7 @@ export default function DateTab() {
         return;
       }
 
-      setSettings(updated);
+      setSettings(settings);
       setSaveSuccess(true);
     } catch {
       setSaveErrors(['Nu s-a putut contacta serverul. Incearca din nou.']);
@@ -114,7 +81,7 @@ export default function DateTab() {
         <input
           type="datetime-local"
           value={localValue}
-          onChange={(event) => setLocalValue(event.target.value)}
+          onChange={(event) => handleLocalValueChange(event.target.value)}
         />
       </label>
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { SettingsRow } from '../../lib/settings';
+import { useSettings } from '../../app/admin/settings-context';
 
 // Every text field editable from this tab, in display order. Deliberately
 // excludes `eventDateIso` (DateTab) and `activeThemeId` / `themeColorOverrides`
@@ -33,38 +34,10 @@ const ARRAY_FIELDS: { key: 'websiteRevealSteps' | 'emailBodyParagraphs'; label: 
 ];
 
 export default function ContentTab() {
-  const [settings, setSettings] = useState<SettingsRow | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { settings, setSettings, loading, loadError } = useSettings();
   const [saving, setSaving] = useState(false);
   const [saveErrors, setSaveErrors] = useState<string[] | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const response = await fetch('/api/admin/settings');
-        if (!response.ok) {
-          throw new Error('Nu s-au putut incarca setarile.');
-        }
-        const data: SettingsRow = await response.json();
-        if (!cancelled) setSettings(data);
-      } catch {
-        if (!cancelled) setLoadError('Nu s-au putut incarca setarile. Incearca din nou.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function updateField(key: keyof SettingsRow, value: string) {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -110,6 +83,7 @@ export default function ContentTab() {
         return;
       }
 
+      setSettings(settings);
       setSaveSuccess(true);
     } catch {
       setSaveErrors(['Nu s-a putut contacta serverul. Incearca din nou.']);

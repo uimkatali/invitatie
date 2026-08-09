@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { AdminTabProvider } from './tab-context';
+import { AdminSettingsProvider } from './settings-context';
 import AdminNav from './AdminNav';
 import LogoutButton from './LogoutButton';
 
@@ -20,17 +21,19 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <AdminTabProvider>
-      <div className="admin-shell">
-        <header className="admin-header">
-          <div className="admin-header-title">
-            <span className="admin-header-mark">//</span>
-            Panou admin
-          </div>
-          <LogoutButton />
-        </header>
-        <AdminNav />
-        <main className="admin-main">{children}</main>
-      </div>
+      <AdminSettingsProvider>
+        <div className="admin-shell">
+          <header className="admin-header">
+            <div className="admin-header-title">
+              <span className="admin-header-mark">//</span>
+              Panou admin
+            </div>
+            <LogoutButton />
+          </header>
+          <AdminNav />
+          <main className="admin-main">{children}</main>
+        </div>
+      </AdminSettingsProvider>
     </AdminTabProvider>
   );
 }
