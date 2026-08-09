@@ -285,6 +285,83 @@
   gap: 0.25rem;
 }
 
+/* Theme picker (ThemeTab) */
+
+.admin-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-family: inherit;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 3px;
+  padding: 0.7rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+
+.admin-theme-card:hover {
+  border-color: var(--admin-text-dim);
+}
+
+.admin-theme-card.is-active {
+  border-color: var(--admin-accent);
+}
+
+.admin-theme-swatch {
+  display: flex;
+  height: 1.6rem;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+}
+
+.admin-theme-swatch-chip {
+  flex: 1;
+}
+
+.admin-theme-name {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text);
+}
+
+.admin-color-pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.admin-color-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-dim);
+}
+
+.admin-color-picker input[type='color'] {
+  width: 2.6rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 3px;
+  background: var(--admin-bg);
+  cursor: pointer;
+}
+
 /* Login page */
 
 .admin-login {
