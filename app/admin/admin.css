@@ -430,6 +430,51 @@
   border-color: var(--admin-accent);
 }
 
+.admin-select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0.6rem 0.7rem;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 3px;
+  color: var(--admin-text);
+}
+
+.admin-select:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+}
+
+/* Media tab */
+
+.admin-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.6rem;
+}
+
+.admin-media-item {
+  position: relative;
+}
+
+.admin-media-thumb {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--admin-border);
+  display: block;
+}
+
+.admin-media-item .admin-list-remove {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background: var(--admin-bg);
+}
+
 .admin-button {
   font-family: inherit;
   font-size: 0.85rem;

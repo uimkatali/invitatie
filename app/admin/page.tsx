@@ -4,12 +4,12 @@ import { ADMIN_TABS, useAdminTab, type AdminTabId } from './tab-context';
 import ContentTab from '../../components/admin/ContentTab';
 import DateTab from '../../components/admin/DateTab';
 import ThemeTab from '../../components/admin/ThemeTab';
+import MediaTab from '../../components/admin/MediaTab';
 
-// Tab content components for media/email land in later tasks (10-12).
-// Until then those tabs render placeholder copy so the shell and navigation
+// Tab content component for email lands in a later task (11).
+// Until then that tab renders placeholder copy so the shell and navigation
 // can be verified end-to-end on their own.
 const PLACEHOLDER_COPY: Partial<Record<AdminTabId, string>> = {
-  media: 'Incarcarea si asignarea pozelor/video-urilor pe zone va fi disponibila aici.',
   email: 'Trimiterea invitatiei prin email va fi disponibila aici.',
 };
 
@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
       {activeTab === 'continut' && <ContentTab />}
       {activeTab === 'data' && <DateTab />}
       {activeTab === 'tema' && <ThemeTab />}
+      {activeTab === 'media' && <MediaTab />}
       {PLACEHOLDER_COPY[activeTab] && (
         <p className="admin-panel-placeholder">{PLACEHOLDER_COPY[activeTab]}</p>
       )}
