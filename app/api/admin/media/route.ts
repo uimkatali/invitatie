@@ -27,8 +27,8 @@ export async function DELETE(request: NextRequest) {
   }
   const { rows } = await sql`SELECT url FROM media WHERE id = ${id}`;
   if (rows.length > 0) {
-    await del(rows[0].url);
     await sql`DELETE FROM media WHERE id = ${id}`;
+    await del(rows[0].url);
   }
   return NextResponse.json({ ok: true });
 }
