@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   LOCATION_OPTIONS,
   validateSelections,
@@ -26,6 +26,10 @@ export default function SelectionsForm() {
   const [errors, setErrors] = useState<SelectionsErrors>({});
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  // The save effect below must not fire with the still-empty initial state
+  // before the load effect has had a chance to apply the stored draft —
+  // otherwise it overwrites the real draft in localStorage with blanks.
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(DRAFT_KEY);
@@ -39,6 +43,10 @@ export default function SelectionsForm() {
   }, []);
 
   useEffect(() => {
+    if (!hasLoaded.current) {
+      hasLoaded.current = true;
+      return;
+    }
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(selections));
   }, [selections]);
 
