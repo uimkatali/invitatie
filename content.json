@@ -34,5 +34,19 @@
     "errorText": "Hmm, nu e chiar asta. Mai incearca.",
     "expectedUsername": "fatamisterioasa",
     "expectedPassword": "elefant123"
+  },
+  "themeLogin": {
+    "title": "Schimba tema",
+    "hint": "Doar tu ai codul asta.",
+    "usernameLabel": "Utilizator",
+    "passwordLabel": "Parola",
+    "submitText": "Intra",
+    "errorText": "Gresit. Mai incearca.",
+    "expectedUsername": "cata",
+    "expectedPassword": "schimba-parola-asta"
+  },
+  "selectionsEmail": {
+    "subject": "Selectiile ei pentru urmatorul date",
+    "preheader": "Iata ce a ales pentru voi doi."
   }
 }
