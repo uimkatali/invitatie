@@ -14,9 +14,13 @@ interface LoginGateProps {
   expectedUsername: string;
   expectedPassword: string;
   children: ReactNode;
+  // Different LoginGate instances on the same site (recipient vs. owner) must
+  // use different keys — otherwise unlocking one unlocks the other, since
+  // localStorage is shared across the whole origin.
+  storageKey?: string;
 }
 
-const STORAGE_KEY = 'invitatie-unlocked';
+const DEFAULT_STORAGE_KEY = 'invitatie-unlocked';
 
 export default function LoginGate({
   title,
@@ -28,6 +32,7 @@ export default function LoginGate({
   expectedUsername,
   expectedPassword,
   children,
+  storageKey = DEFAULT_STORAGE_KEY,
 }: LoginGateProps) {
   const [unlocked, setUnlocked] = useState(false);
   const [username, setUsername] = useState('');
@@ -35,15 +40,15 @@ export default function LoginGate({
   const [showError, setShowError] = useState(false);
 
   useEffect(() => {
-    if (window.localStorage.getItem(STORAGE_KEY) === 'true') {
+    if (window.localStorage.getItem(storageKey) === 'true') {
       setUnlocked(true);
     }
-  }, []);
+  }, [storageKey]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (checkCredentials(username, password, expectedUsername, expectedPassword)) {
-      window.localStorage.setItem(STORAGE_KEY, 'true');
+      window.localStorage.setItem(storageKey, 'true');
       setUnlocked(true);
       setShowError(false);
     } else {

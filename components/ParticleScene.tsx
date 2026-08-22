@@ -39,6 +39,14 @@ function starShape(): THREE.Shape {
   return shape;
 }
 
+function petalShape(): THREE.Shape {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, -0.4);
+  shape.bezierCurveTo(0.35, -0.25, 0.35, 0.25, 0, 0.5);
+  shape.bezierCurveTo(-0.35, 0.25, -0.35, -0.25, 0, -0.4);
+  return shape;
+}
+
 const extrudeSettings = { depth: 0.14, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 };
 
 // ---------- Material ----------
@@ -162,6 +170,20 @@ function ShapeGeometry({ shape, material, color, secondaryColor }: ShapeProps & 
         <mesh scale={0.9}>
           <extrudeGeometry args={[starShape(), extrudeSettings]} />
           <ParticleMaterial material={material} color={color} />
+        </mesh>
+      );
+    case 'petal':
+      return (
+        <mesh scale={0.75} rotation={[0, 0, Math.PI / 6]}>
+          <extrudeGeometry args={[petalShape(), extrudeSettings]} />
+          <ParticleMaterial material={material} color={color} />
+        </mesh>
+      );
+    case 'firefly':
+      return (
+        <mesh>
+          <sphereGeometry args={[0.14, 12, 12]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.2} roughness={0.4} />
         </mesh>
       );
     default:

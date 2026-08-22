@@ -5,64 +5,19 @@ import dynamic from 'next/dynamic';
 import RevealMessage from './RevealMessage';
 import Countdown from './Countdown';
 import LoginGate from './LoginGate';
-import type { PublicSettings } from '../lib/get-public-settings';
+import SelectionsForm from './SelectionsForm';
+import type { InviteContent } from '../lib/content';
 import type { ResolvedTheme } from '../lib/themes';
-import type { MediaItem, MediaZone } from '../lib/media';
 
 const ParticleScene = dynamic(() => import('./ParticleScene'), { ssr: false });
 
 interface HomeClientProps {
-  settings: PublicSettings;
+  content: InviteContent;
   theme: ResolvedTheme;
-  media: MediaItem[];
 }
 
-function isVideoUrl(url: string): boolean {
-  return /\.(mp4|webm|mov|m4v)$/i.test(url);
-}
-
-function latestForZone(media: MediaItem[], zone: MediaZone): MediaItem | null {
-  return media.find((item) => item.zone === zone) ?? null;
-}
-
-function ZoneBackground({ item }: { item: MediaItem | null }) {
-  if (!item) return null;
-  return (
-    <div className="zone-background" aria-hidden="true">
-      {isVideoUrl(item.url) ? (
-        <video src={item.url} autoPlay loop muted playsInline />
-      ) : (
-        <img src={item.url} alt="" />
-      )}
-    </div>
-  );
-}
-
-function GallerySection({ items }: { items: MediaItem[] }) {
-  if (items.length === 0) return null;
-  return (
-    <section className="gallery-section">
-      <div className="gallery-grid">
-        {items.map((item) => (
-          <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="gallery-item">
-            {isVideoUrl(item.url) ? (
-              <video src={item.url} muted />
-            ) : (
-              <img src={item.url} alt="" loading="lazy" />
-            )}
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export default function HomeClient({ settings, theme, media }: HomeClientProps) {
+export default function HomeClient({ content, theme }: HomeClientProps) {
   const [revealed, setRevealed] = useState(false);
-
-  const heroBackground = latestForZone(media, 'heroBackground');
-  const revealBackground = latestForZone(media, 'revealBackground');
-  const galleryItems = media.filter((item) => item.zone === 'gallery');
 
   const themeStyle = {
     '--color-bg-dark': theme.colors.bgDark,
@@ -75,40 +30,38 @@ export default function HomeClient({ settings, theme, media }: HomeClientProps) 
   return (
     <div style={themeStyle}>
       <LoginGate
-        title={settings.login.title}
-        hint={settings.login.hint}
-        usernameLabel={settings.login.usernameLabel}
-        passwordLabel={settings.login.passwordLabel}
-        submitText={settings.login.submitText}
-        errorText={settings.login.errorText}
-        expectedUsername={settings.login.expectedUsername}
-        expectedPassword={settings.login.expectedPassword}
+        title={content.login.title}
+        hint={content.login.hint}
+        usernameLabel={content.login.usernameLabel}
+        passwordLabel={content.login.passwordLabel}
+        submitText={content.login.submitText}
+        errorText={content.login.errorText}
+        expectedUsername={content.login.expectedUsername}
+        expectedPassword={content.login.expectedPassword}
       >
         <main>
           <div className="scene-container">
-            <ZoneBackground item={heroBackground} />
             <ParticleScene theme={theme} />
           </div>
           {!revealed ? (
             <div className="reveal-wrap">
-              <ZoneBackground item={revealBackground} />
               <RevealMessage
-                steps={settings.website.revealSteps}
-                tapPrompt={settings.website.tapPrompt}
-                introLine={settings.website.introLine}
+                steps={content.website.revealSteps}
+                tapPrompt={content.website.tapPrompt}
+                introLine={content.website.introLine}
                 onComplete={() => setRevealed(true)}
               />
             </div>
           ) : (
             <div className="countdown-wrap">
               <Countdown
-                targetISO={settings.eventDateIso}
-                label={settings.website.countdownLabel}
-                completeLabel={settings.website.countdownCompleteLabel}
+                targetISO={content.eventDateISO}
+                label={content.website.countdownLabel}
+                completeLabel={content.website.countdownCompleteLabel}
               />
+              <SelectionsForm />
             </div>
           )}
-          <GallerySection items={galleryItems} />
         </main>
       </LoginGate>
     </div>

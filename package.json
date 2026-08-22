@@ -8,19 +8,14 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "build:email": "node scripts/build-email.mjs",
-    "db:migrate": "node scripts/migrate.mjs",
-    "db:seed": "node scripts/seed-admin.mjs"
+    "build:email": "node scripts/build-email.mjs"
   },
   "license": "ISC",
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
-    "@vercel/blob": "^2.7.0",
-    "@vercel/postgres": "^0.10.0",
-    "bcryptjs": "^3.0.3",
-    "jose": "^6.2.8",
+    "@vercel/edge-config": "^1.5.1",
     "next": "^16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -28,7 +23,6 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/three": "^0.185.1",
