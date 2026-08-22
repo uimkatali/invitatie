@@ -9,11 +9,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   background: var(--color-bg-dark);
   color: var(--color-cream);
   font-family: Georgia, 'Times New Roman', serif;
-  overflow: hidden;
+  /* Content (esp. the selections form) can be taller than one viewport —
+     the 3D scene behind it is `position: fixed`, so it stays put while
+     this scrolls. Without this, taller content was clipped with no way
+     to reach it (reported: submit button hidden behind the OS taskbar). */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scene-container {
@@ -159,53 +165,6 @@ html, body {
   position: relative;
 }
 
-.zone-background {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  opacity: 0.25;
-  pointer-events: none;
-}
-
-.zone-background img,
-.zone-background video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.gallery-section {
-  position: relative;
-  z-index: 1;
-  padding: 2rem 1.5rem 3rem;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.75rem;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.gallery-item {
-  display: block;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--color-accent-blue, #7fc4e8);
-}
-
-.gallery-item img,
-.gallery-item video {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
-}
-
 .selections-form {
   position: relative;
   z-index: 1;
@@ -218,12 +177,6 @@ html, body {
   padding: 1.5rem;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
-}
-
-@media (max-width: 480px) {
-  .options-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .selections-form h2 {
@@ -286,6 +239,12 @@ html, body {
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+
+@media (max-width: 480px) {
+  .options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .option-label {
