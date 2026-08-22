@@ -213,11 +213,17 @@ html, body {
   flex-direction: column;
   gap: 0.9rem;
   width: 100%;
-  max-width: 360px;
+  max-width: 460px;
   margin: 2rem auto 0;
   padding: 1.5rem;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
+}
+
+@media (max-width: 480px) {
+  .options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .selections-form h2 {
@@ -232,6 +238,61 @@ html, body {
   gap: 0.35rem;
   font-size: 0.85rem;
   text-align: left;
+  color: #fff2e6;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  /* Fixed dark scrim, independent of the active 3D theme's background —
+     guarantees the label stays readable no matter which of the 15 themes
+     is active, instead of relying on translucency over a variable backdrop. */
+  background: rgba(15, 8, 20, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  font-family: inherit;
+}
+
+.option-card:hover {
+  border-color: var(--color-accent-blue, #ff9ab0);
+  transform: translateY(-2px);
+}
+
+.option-card-selected {
+  border-color: var(--color-accent-blue, #ff9ab0);
+  box-shadow: 0 0 0 2px var(--color-accent-blue, #ff9ab0);
+}
+
+.option-icon {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.option-icon canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.option-label {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: center;
+  color: #fff2e6;
 }
 
 .selections-field input,
@@ -246,7 +307,7 @@ html, body {
   font-family: inherit;
 }
 
-.selections-form button {
+.selections-submit {
   margin-top: 0.5rem;
   padding: 0.7rem 1rem;
   border-radius: 8px;
@@ -258,7 +319,7 @@ html, body {
   cursor: pointer;
 }
 
-.selections-form button:disabled {
+.selections-submit:disabled {
   opacity: 0.6;
   cursor: default;
 }

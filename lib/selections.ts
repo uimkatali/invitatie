@@ -15,7 +15,7 @@ export type LocationId = (typeof LOCATION_OPTIONS)[number]['id'];
 export interface Selections {
   location: LocationId | '';
   customLocation: string;
-  preferredTime: string;
+  preferredDateTime: string;
   homeDetails: string;
   email: string;
 }
@@ -23,14 +23,14 @@ export interface Selections {
 export interface SelectionsErrors {
   location?: string;
   customLocation?: string;
-  preferredTime?: string;
+  preferredDateTime?: string;
   homeDetails?: string;
   email?: string;
 }
 
 const LOCATION_IDS = new Set<string>(LOCATION_OPTIONS.map((option) => option.id));
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
 
 export function validateSelections(selections: Selections): SelectionsErrors {
   const errors: SelectionsErrors = {};
@@ -41,8 +41,8 @@ export function validateSelections(selections: Selections): SelectionsErrors {
   if (selections.location === 'dupa-pofta-inimii' && selections.customLocation.trim() === '') {
     errors.customLocation = 'Spune-i macar o idee.';
   }
-  if (!TIME_PATTERN.test(selections.preferredTime)) {
-    errors.preferredTime = 'Alege o ora valida.';
+  if (!DATETIME_PATTERN.test(selections.preferredDateTime)) {
+    errors.preferredDateTime = 'Alege data si ora intalnirii.';
   }
   if (selections.location === 'acasa' && selections.homeDetails.trim() === '') {
     errors.homeDetails = 'Spune ce sa pregatesc.';
@@ -60,4 +60,22 @@ export function isValid(errors: SelectionsErrors): boolean {
 
 export function locationLabel(id: string): string {
   return LOCATION_OPTIONS.find((option) => option.id === id)?.label ?? id;
+}
+
+const MONTHS_RO = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+];
+
+// Formats a `datetime-local` value ("YYYY-MM-DDTHH:MM") for display in the
+// summary email. Falls back to the raw value for anything malformed rather
+// than throwing, since this only ever feeds a text label.
+export function formatDateTime(value: string): string {
+  const match = DATETIME_PATTERN.exec(value);
+  if (!match) return value;
+  const [datePart, timePart] = value.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const monthName = MONTHS_RO[month - 1];
+  if (!monthName) return value;
+  return `${day} ${monthName} ${year}, ora ${timePart}`;
 }

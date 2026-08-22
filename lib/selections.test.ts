@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { LOCATION_OPTIONS, validateSelections, isValid, locationLabel, type Selections } from './selections';
+import { LOCATION_OPTIONS, validateSelections, isValid, locationLabel, formatDateTime, type Selections } from './selections';
 
 function baseSelections(overrides: Partial<Selections> = {}): Selections {
   return {
     location: 'munte',
     customLocation: '',
-    preferredTime: '14:30',
+    preferredDateTime: '2026-09-14T18:30',
     homeDetails: '',
     email: 'ea@example.com',
     ...overrides,
@@ -66,10 +66,10 @@ describe('validateSelections', () => {
     expect(errors.homeDetails).toBeUndefined();
   });
 
-  it('requires a valid HH:MM time', () => {
-    expect(validateSelections(baseSelections({ preferredTime: '' })).preferredTime).toBeDefined();
-    expect(validateSelections(baseSelections({ preferredTime: '25:99' })).preferredTime).toBeDefined();
-    expect(validateSelections(baseSelections({ preferredTime: '09:05' })).preferredTime).toBeUndefined();
+  it('requires a valid datetime-local value', () => {
+    expect(validateSelections(baseSelections({ preferredDateTime: '' })).preferredDateTime).toBeDefined();
+    expect(validateSelections(baseSelections({ preferredDateTime: '2026-13-40T25:99' })).preferredDateTime).toBeDefined();
+    expect(validateSelections(baseSelections({ preferredDateTime: '2026-09-14T18:30' })).preferredDateTime).toBeUndefined();
   });
 
   it('requires a valid email', () => {
@@ -95,5 +95,19 @@ describe('locationLabel', () => {
 
   it('falls back to the raw id for an unknown value', () => {
     expect(locationLabel('luna')).toBe('luna');
+  });
+});
+
+describe('formatDateTime', () => {
+  it('formats a valid datetime-local value in Romanian', () => {
+    expect(formatDateTime('2026-09-14T18:30')).toBe('14 septembrie 2026, ora 18:30');
+  });
+
+  it('pads single-digit days unchanged (no leading zero stripped incorrectly)', () => {
+    expect(formatDateTime('2026-01-05T09:05')).toBe('5 ianuarie 2026, ora 09:05');
+  });
+
+  it('falls back to the raw value for malformed input', () => {
+    expect(formatDateTime('not-a-date')).toBe('not-a-date');
   });
 });

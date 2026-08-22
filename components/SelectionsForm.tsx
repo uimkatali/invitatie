@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import dynamic from 'next/dynamic';
 import {
   LOCATION_OPTIONS,
   validateSelections,
@@ -9,12 +10,14 @@ import {
   type SelectionsErrors,
 } from '../lib/selections';
 
+const OptionIcon = dynamic(() => import('./OptionIcon'), { ssr: false });
+
 const DRAFT_KEY = 'invitatie-selections-draft';
 
 const EMPTY_SELECTIONS: Selections = {
   location: '',
   customLocation: '',
-  preferredTime: '',
+  preferredDateTime: '',
   homeDetails: '',
   email: '',
 };
@@ -85,21 +88,23 @@ export default function SelectionsForm() {
     <form className="selections-form" onSubmit={handleSubmit}>
       <h2>Ce iti doresti pentru urmatorul date?</h2>
 
-      <label className="selections-field">
-        Loc / activitate
-        <select
-          value={selections.location}
-          onChange={(event) => update('location', event.target.value as Selections['location'])}
-        >
-          <option value="">Alege...</option>
-          {LOCATION_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        {errors.location && <span className="selections-error">{errors.location}</span>}
-      </label>
+      <div className="options-grid" role="group" aria-label="Loc / activitate">
+        {LOCATION_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`option-card${selections.location === option.id ? ' option-card-selected' : ''}`}
+            onClick={() => update('location', option.id)}
+            aria-pressed={selections.location === option.id}
+          >
+            <span className="option-icon">
+              <OptionIcon kind={option.id} />
+            </span>
+            <span className="option-label">{option.label}</span>
+          </button>
+        ))}
+      </div>
+      {errors.location && <span className="selections-error">{errors.location}</span>}
 
       {selections.location === 'dupa-pofta-inimii' && (
         <label className="selections-field">
@@ -114,13 +119,13 @@ export default function SelectionsForm() {
       )}
 
       <label className="selections-field">
-        Ora preferata
+        Data si ora intalnirii
         <input
-          type="time"
-          value={selections.preferredTime}
-          onChange={(event) => update('preferredTime', event.target.value)}
+          type="datetime-local"
+          value={selections.preferredDateTime}
+          onChange={(event) => update('preferredDateTime', event.target.value)}
         />
-        {errors.preferredTime && <span className="selections-error">{errors.preferredTime}</span>}
+        {errors.preferredDateTime && <span className="selections-error">{errors.preferredDateTime}</span>}
       </label>
 
       {selections.location === 'acasa' && (
@@ -144,7 +149,7 @@ export default function SelectionsForm() {
         {errors.email && <span className="selections-error">{errors.email}</span>}
       </label>
 
-      <button type="submit" disabled={status === 'sending'}>
+      <button type="submit" className="selections-submit" disabled={status === 'sending'}>
         {status === 'sending' ? 'Se trimite...' : 'Trimite'}
       </button>
 

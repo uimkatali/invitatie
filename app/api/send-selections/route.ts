@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import fs from 'node:fs';
 import path from 'node:path';
-import { validateSelections, isValid, locationLabel, type Selections } from '../../../lib/selections';
+import { validateSelections, isValid, locationLabel, formatDateTime, type Selections } from '../../../lib/selections';
 import { renderTemplate } from '../../../scripts/build-email.mjs';
 import { getContent } from '../../../lib/content';
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const selections: Selections = {
     location: asString(raw.location) as Selections['location'],
     customLocation: asString(raw.customLocation),
-    preferredTime: asString(raw.preferredTime),
+    preferredDateTime: asString(raw.preferredDateTime),
     homeDetails: asString(raw.homeDetails),
     email: asString(raw.email),
   };
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (selections.customLocation) {
       rows.push(`<p style="margin:0 0 12px;"><strong>Idee:</strong> ${escapeHtml(selections.customLocation)}</p>`);
     }
-    rows.push(`<p style="margin:0 0 12px;"><strong>Ora preferata:</strong> ${escapeHtml(selections.preferredTime)}</p>`);
+    rows.push(`<p style="margin:0 0 12px;"><strong>Data si ora intalnirii:</strong> ${escapeHtml(formatDateTime(selections.preferredDateTime))}</p>`);
     if (selections.homeDetails) {
       rows.push(`<p style="margin:0 0 12px;"><strong>De pregatit:</strong> ${escapeHtml(selections.homeDetails)}</p>`);
     }
