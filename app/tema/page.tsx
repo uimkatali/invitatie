@@ -47,6 +47,7 @@ export default function ThemePage() {
       errorText={content.themeLogin.errorText}
       expectedUsername={content.themeLogin.expectedUsername}
       expectedPassword={content.themeLogin.expectedPassword}
+      storageKey="invitatie-tema-unlocked"
     >
       <main className="theme-picker">
         <h1>Alege tema</h1>
