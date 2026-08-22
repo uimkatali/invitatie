@@ -273,3 +273,48 @@ html, body {
   text-align: center;
   color: var(--color-accent-blue, #ff9ab0);
 }
+
+.theme-picker {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.theme-picker h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.theme-swatch {
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-family: inherit;
+  min-height: 90px;
+}
+
+.theme-swatch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.theme-status {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 1rem;
+}
+
+.theme-status-error {
+  color: #ff6b81;
+}
