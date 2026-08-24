@@ -6,7 +6,10 @@ import { validateSelections, isValid, locationLabel, formatDateTime, type Select
 import { renderTemplate } from '../../../scripts/build-email.mjs';
 import { getContent } from '../../../lib/content';
 
-const NOTIFY_EMAIL = 'miu.catalinm@gmail.com';
+// Must match the email the Resend account is registered with — until a
+// domain is verified on resend.com/domains, Resend's free tier only allows
+// sending to that one address (sandbox restriction, not a bug in this code).
+const NOTIFY_EMAIL = 'b8bf6b5@gmail.com';
 
 function escapeHtml(value: string): string {
   return value
