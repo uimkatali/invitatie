@@ -3,13 +3,11 @@
   "senderName": "miu.catalinm@gmail.com",
   "eventDateISO": "2026-08-24T13:00:00+03:00",
   "website": {
-    "introLine": "Am o mica taina pentru tine.",
+    "introLine": "",
     "tapPrompt": "Atinge ecranul ca sa continui",
     "revealSteps": [
-      "Exista un loc in Bucuresti pe care inca nu l-ai vazut.",
-      "L-am gasit gandindu-ma la tine.",
-      "Nu iti spun ce e, nici unde e. Doar atat: pregateste-te.",
-      "Tot ce trebuie sa stii acum e o data si o ora."
+      "Hei fata misterioasa",
+      "Pentru ca imi doresc foarte mult sa petrec timp cu tine, ar trebui sa te pregatesti pentru inca un \"First Date\""
     ],
     "countdownLabel": "Pana atunci, mai avem de asteptat:",
     "countdownCompleteLabel": "E acum. Te astept."
