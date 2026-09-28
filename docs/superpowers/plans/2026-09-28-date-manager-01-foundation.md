@@ -1174,42 +1174,23 @@ git commit -m "feat: add signed JWT session helpers"
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { isBlocked, afterFailure, hashIp, RATE_LIMIT_MAX_FAILURES, RATE_LIMIT_WINDOW_MS } from './rate-limit';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
+import { hashIp, exceedsLimit, toSqlDateTime, buildReserveAttemptQuery, RATE_LIMIT_MAX_FAILURES } from './rate-limit';
 
-const NOW = new Date('2026-09-28T12:00:00Z');
-const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000);
-
-describe('isBlocked', () => {
-  it('is false without a row', () => {
-    expect(isBlocked(null, NOW)).toBe(false);
+describe('exceedsLimit', () => {
+  it('is false at and below the max', () => {
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES)).toBe(false);
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES - 1)).toBe(false);
   });
 
-  it('is true at the max inside the window', () => {
-    expect(isBlocked({ windowStart: minutesAgo(5), count: RATE_LIMIT_MAX_FAILURES }, NOW)).toBe(true);
-  });
-
-  it('is false below the max', () => {
-    expect(isBlocked({ windowStart: minutesAgo(5), count: RATE_LIMIT_MAX_FAILURES - 1 }, NOW)).toBe(false);
-  });
-
-  it('is false once the window passed', () => {
-    const windowMinutes = RATE_LIMIT_WINDOW_MS / 60_000;
-    expect(isBlocked({ windowStart: minutesAgo(windowMinutes), count: 99 }, NOW)).toBe(false);
+  it('is true above the max', () => {
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES + 1)).toBe(true);
   });
 });
 
-describe('afterFailure', () => {
-  it('starts a new window', () => {
-    expect(afterFailure(null, NOW)).toEqual({ windowStart: NOW, count: 1 });
-  });
-
-  it('increments inside the window', () => {
-    const start = minutesAgo(3);
-    expect(afterFailure({ windowStart: start, count: 2 }, NOW)).toEqual({ windowStart: start, count: 3 });
-  });
-
-  it('resets after the window', () => {
-    expect(afterFailure({ windowStart: minutesAgo(16), count: 5 }, NOW)).toEqual({ windowStart: NOW, count: 1 });
+describe('toSqlDateTime', () => {
+  it('formats a UTC date as YYYY-MM-DD HH:MM:SS', () => {
+    expect(toSqlDateTime(new Date('2026-09-28T12:34:56.789Z'))).toBe('2026-09-28 12:34:56');
   });
 });
 
@@ -1219,6 +1200,34 @@ describe('hashIp', () => {
     expect(a).toMatch(/^[0-9a-f]{64}$/);
     expect(hashIp('1.2.3.4', 'x'.repeat(32))).toBe(a);
     expect(hashIp('1.2.3.4', 'y'.repeat(32))).not.toBe(a);
+  });
+});
+
+describe('buildReserveAttemptQuery', () => {
+  it('assigns count before window_start in the SET clause', () => {
+    // MySQL/TiDB evaluate ON DUPLICATE KEY UPDATE assignments left to right, and the
+    // count expression reads window_start: if window_start were reassigned first,
+    // count would see the new value instead of the value stored before this statement.
+    const now = new Date('2026-09-28T12:00:00Z');
+    const dialect = new MySqlDialect();
+
+    const { sql: text } = dialect.sqlToQuery(buildReserveAttemptQuery('x'.repeat(64), now));
+
+    const countIdx = text.indexOf('`count` =');
+    const windowIdx = text.indexOf('`window_start` =');
+    expect(countIdx).toBeGreaterThan(-1);
+    expect(windowIdx).toBeGreaterThan(-1);
+    expect(countIdx).toBeLessThan(windowIdx);
+  });
+
+  it('does not qualify the SET target columns with the table name', () => {
+    const now = new Date('2026-09-28T12:00:00Z');
+    const dialect = new MySqlDialect();
+    const { sql: text } = dialect.sqlToQuery(buildReserveAttemptQuery('x'.repeat(64), now));
+
+    expect(text).toContain('on duplicate key update');
+    expect(text).not.toContain('login_attempts`.`count` =');
+    expect(text).not.toContain('login_attempts`.`window_start` =');
   });
 });
 ```
@@ -1246,7 +1255,7 @@ describe('clientIpFrom', () => {
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import { hasTestDb, testDb, resetDb } from '@/test/db';
-import { getAttempts, recordFailure, clearAttempts } from './rate-limit';
+import { getAttempts, reserveAttempt, exceedsLimit, clearAttempts, RATE_LIMIT_WINDOW_MS } from './rate-limit';
 
 describe.skipIf(!hasTestDb)('rate limit persistence', () => {
   const db = hasTestDb ? testDb() : (null as never);
@@ -1257,11 +1266,25 @@ describe.skipIf(!hasTestDb)('rate limit persistence', () => {
     await resetDb(db);
   });
 
-  it('records failures and clears them', async () => {
+  it('increments sequentially and resets once the window passes', async () => {
     expect(await getAttempts(db, ipHash)).toBeNull();
-    await recordFailure(db, ipHash, now);
-    await recordFailure(db, ipHash, now);
-    expect((await getAttempts(db, ipHash))?.count).toBe(2);
+
+    for (let i = 1; i <= 6; i++) {
+      expect(await reserveAttempt(db, ipHash, now)).toBe(i);
+    }
+    expect(exceedsLimit(6)).toBe(true);
+
+    const afterWindow = new Date(now.getTime() + RATE_LIMIT_WINDOW_MS + 60_000);
+    expect(await reserveAttempt(db, ipHash, afterWindow)).toBe(1);
+  });
+
+  it('does not lose updates under concurrent reservations', async () => {
+    await Promise.all(Array.from({ length: 10 }, () => reserveAttempt(db, ipHash, now)));
+    expect((await getAttempts(db, ipHash))?.count).toBe(10);
+  });
+
+  it('clears attempts', async () => {
+    await reserveAttempt(db, ipHash, now);
     await clearAttempts(db, ipHash);
     expect(await getAttempts(db, ipHash)).toBeNull();
   });
@@ -1277,9 +1300,15 @@ Expected: FAIL.
 
 `lib/auth/rate-limit.ts`:
 
+Nota (security review post-implementare): varianta initiala facea `isBlocked(getAttempts) -> bcrypt -> recordFailure` (citeste-apoi-scrie), ceea ce nu e atomic -- cereri paralele treceau toate de verificare si actualizarile se pierdeau (undercounting). Inlocuita cu o rezervare atomica INAINTE de verificarea parolei, intr-un singur `INSERT ... ON DUPLICATE KEY UPDATE`. `isBlocked`, `afterFailure` si `recordFailure` au fost eliminate (cod mort dupa schimbare); `getAttempts`, `clearAttempts`, `hashIp` si constantele raman.
+
+`hashIp` foloseste acum `createHmac` (nu `createHash` cu secretul concatenat in text): HMAC e constructia corecta pentru "hash legat de o cheie".
+
+Ordinea asignarilor din SET conteaza (`count` trebuie evaluat inaintea lui `window_start`, vezi comentariul din cod), dar `db.insert(...).onDuplicateKeyUpdate({ set: {...} })` al drizzle reordoneaza intotdeauna dupa ordinea de DECLARARE a coloanelor in schema (`mysql-core/dialect.js#buildUpdateSet`), ignorand ordinea cheilor din `set`. De aceea statement-ul e scris ca `sql` bruta si executat cu `db.execute(...)`, nu prin `.onDuplicateKeyUpdate()`.
+
 ```ts
-import { createHash } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { createHmac } from 'node:crypto';
+import { eq, sql, getTableName, type SQL } from 'drizzle-orm';
 import type { DbOrTx } from '../db/client';
 import { loginAttempts } from '../db/schema';
 
@@ -1291,22 +1320,14 @@ export interface AttemptWindow {
   count: number;
 }
 
-function windowExpired(row: AttemptWindow, now: Date): boolean {
-  return now.getTime() - row.windowStart.getTime() >= RATE_LIMIT_WINDOW_MS;
-}
-
-export function isBlocked(row: AttemptWindow | null, now: Date): boolean {
-  return row !== null && !windowExpired(row, now) && row.count >= RATE_LIMIT_MAX_FAILURES;
-}
-
-export function afterFailure(row: AttemptWindow | null, now: Date): AttemptWindow {
-  if (!row || windowExpired(row, now)) return { windowStart: now, count: 1 };
-  return { windowStart: row.windowStart, count: row.count + 1 };
-}
-
-/** IP-ul brut nu se stocheaza: doar un hash legat de SESSION_SECRET. */
+/** IP-ul brut nu se stocheaza: doar un HMAC legat de SESSION_SECRET (nu un hash simplu, ca sa nu poata fi brute-forced offline). */
 export function hashIp(ip: string, secret: string): string {
-  return createHash('sha256').update(`${secret}:${ip}`).digest('hex');
+  return createHmac('sha256', secret).update(ip).digest('hex');
+}
+
+/** 'YYYY-MM-DD HH:MM:SS' UTC. Parametrii dintr-un sql`` nu trec prin maparea de tip a coloanei datetime, deci ii formatam explicit. */
+export function toSqlDateTime(date: Date): string {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 export async function getAttempts(db: DbOrTx, ipHash: string): Promise<AttemptWindow | null> {
@@ -1318,12 +1339,43 @@ export async function getAttempts(db: DbOrTx, ipHash: string): Promise<AttemptWi
   return row ?? null;
 }
 
-export async function recordFailure(db: DbOrTx, ipHash: string, now: Date): Promise<void> {
-  const next = afterFailure(await getAttempts(db, ipHash), now);
-  await db
-    .insert(loginAttempts)
-    .values({ ipHash, ...next })
-    .onDuplicateKeyUpdate({ set: { windowStart: next.windowStart, count: next.count } });
+const tableId = sql.identifier(getTableName(loginAttempts));
+const ipHashId = sql.identifier(loginAttempts.ipHash.name);
+const windowStartId = sql.identifier(loginAttempts.windowStart.name);
+const countId = sql.identifier(loginAttempts.count.name);
+
+/**
+ * Construieste (fara sa execute) statement-ul brut de rezervare atomica a unei incercari.
+ *
+ * IMPORTANT: `count` trebuie asignat inaintea lui `window_start`. MySQL/TiDB evalueaza
+ * asignarile dintr-un ON DUPLICATE KEY UPDATE in ordine, de la stanga la dreapta, iar
+ * expresia lui `count` citeste `window_start`: daca `window_start` ar fi fost deja
+ * suprascris de o asignare anterioara, `count` ar vedea valoarea noua in loc de cea
+ * stocata si nu ar mai putea decide corect daca fereastra a expirat.
+ */
+export function buildReserveAttemptQuery(ipHash: string, now: Date): SQL {
+  const cutoff = toSqlDateTime(new Date(now.getTime() - RATE_LIMIT_WINDOW_MS));
+  const nowValue = toSqlDateTime(now);
+  return sql`insert into ${tableId} (${ipHashId}, ${windowStartId}, ${countId})
+    values (${ipHash}, ${nowValue}, 1)
+    on duplicate key update
+      ${countId} = IF(${windowStartId} <= ${cutoff}, 1, ${countId} + 1),
+      ${windowStartId} = IF(${windowStartId} <= ${cutoff}, ${nowValue}, ${windowStartId})`;
+}
+
+/**
+ * Rezerva atomic o incercare de login, INAINTE de verificarea parolei: un singur
+ * INSERT ... ON DUPLICATE KEY UPDATE, fara citire-apoi-scriere (care ar pierde
+ * actualizari sub cereri paralele). Intoarce numarul de incercari din fereastra curenta.
+ */
+export async function reserveAttempt(db: DbOrTx, ipHash: string, now: Date): Promise<number> {
+  await db.execute(buildReserveAttemptQuery(ipHash, now));
+  const row = await getAttempts(db, ipHash);
+  return row?.count ?? 1;
+}
+
+export function exceedsLimit(count: number): boolean {
+  return count > RATE_LIMIT_MAX_FAILURES;
 }
 
 export async function clearAttempts(db: DbOrTx, ipHash: string): Promise<void> {
@@ -2011,7 +2063,7 @@ import { env } from '@/lib/env';
 import { getDb } from '@/lib/db/client';
 import { authenticate } from '@/lib/auth/credentials';
 import { signSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
-import { hashIp, getAttempts, isBlocked, recordFailure, clearAttempts } from '@/lib/auth/rate-limit';
+import { hashIp, reserveAttempt, exceedsLimit, clearAttempts } from '@/lib/auth/rate-limit';
 import { clientIpFrom } from '@/lib/auth/client-ip';
 import { pickStrings } from '@/lib/form';
 import { log, errorName } from '@/lib/log';
@@ -2036,7 +2088,11 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     const now = new Date();
     const ipHash = hashIp(clientIpFrom(await headers()), e.SESSION_SECRET);
 
-    if (isBlocked(await getAttempts(db, ipHash), now)) {
+    // Rezervarea se face INAINTE de verificarea parolei si conteaza automat incercarea
+    // curenta (atomic, vezi lib/auth/rate-limit.ts): daca autentificarea esueaza mai jos,
+    // nu mai inregistram inca o data esecul, e deja numarat.
+    const attempts = await reserveAttempt(db, ipHash, now);
+    if (exceedsLimit(attempts)) {
       log('warn', 'login_rate_limited');
       return { ok: false, error: TOO_MANY, values: { username: values.username } };
     }
@@ -2047,7 +2103,6 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     ]);
 
     if (!user) {
-      await recordFailure(db, ipHash, now);
       log('warn', 'login_failed');
       return { ok: false, error: WRONG_CREDENTIALS, values: { username: values.username } };
     }

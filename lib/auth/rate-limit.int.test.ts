@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { hasTestDb, testDb, resetDb } from '@/test/db';
-import { getAttempts, recordFailure, clearAttempts } from './rate-limit';
+import { getAttempts, reserveAttempt, exceedsLimit, clearAttempts, RATE_LIMIT_WINDOW_MS } from './rate-limit';
 
 describe.skipIf(!hasTestDb)('rate limit persistence', () => {
   const db = hasTestDb ? testDb() : (null as never);
@@ -11,11 +11,25 @@ describe.skipIf(!hasTestDb)('rate limit persistence', () => {
     await resetDb(db);
   });
 
-  it('records failures and clears them', async () => {
+  it('increments sequentially and resets once the window passes', async () => {
     expect(await getAttempts(db, ipHash)).toBeNull();
-    await recordFailure(db, ipHash, now);
-    await recordFailure(db, ipHash, now);
-    expect((await getAttempts(db, ipHash))?.count).toBe(2);
+
+    for (let i = 1; i <= 6; i++) {
+      expect(await reserveAttempt(db, ipHash, now)).toBe(i);
+    }
+    expect(exceedsLimit(6)).toBe(true);
+
+    const afterWindow = new Date(now.getTime() + RATE_LIMIT_WINDOW_MS + 60_000);
+    expect(await reserveAttempt(db, ipHash, afterWindow)).toBe(1);
+  });
+
+  it('does not lose updates under concurrent reservations', async () => {
+    await Promise.all(Array.from({ length: 10 }, () => reserveAttempt(db, ipHash, now)));
+    expect((await getAttempts(db, ipHash))?.count).toBe(10);
+  });
+
+  it('clears attempts', async () => {
+    await reserveAttempt(db, ipHash, now);
     await clearAttempts(db, ipHash);
     expect(await getAttempts(db, ipHash)).toBeNull();
   });

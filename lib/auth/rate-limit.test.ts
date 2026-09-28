@@ -1,40 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { isBlocked, afterFailure, hashIp, RATE_LIMIT_MAX_FAILURES, RATE_LIMIT_WINDOW_MS } from './rate-limit';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
+import { hashIp, exceedsLimit, toSqlDateTime, buildReserveAttemptQuery, RATE_LIMIT_MAX_FAILURES } from './rate-limit';
 
-const NOW = new Date('2026-09-28T12:00:00Z');
-const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000);
-
-describe('isBlocked', () => {
-  it('is false without a row', () => {
-    expect(isBlocked(null, NOW)).toBe(false);
+describe('exceedsLimit', () => {
+  it('is false at and below the max', () => {
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES)).toBe(false);
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES - 1)).toBe(false);
   });
 
-  it('is true at the max inside the window', () => {
-    expect(isBlocked({ windowStart: minutesAgo(5), count: RATE_LIMIT_MAX_FAILURES }, NOW)).toBe(true);
-  });
-
-  it('is false below the max', () => {
-    expect(isBlocked({ windowStart: minutesAgo(5), count: RATE_LIMIT_MAX_FAILURES - 1 }, NOW)).toBe(false);
-  });
-
-  it('is false once the window passed', () => {
-    const windowMinutes = RATE_LIMIT_WINDOW_MS / 60_000;
-    expect(isBlocked({ windowStart: minutesAgo(windowMinutes), count: 99 }, NOW)).toBe(false);
+  it('is true above the max', () => {
+    expect(exceedsLimit(RATE_LIMIT_MAX_FAILURES + 1)).toBe(true);
   });
 });
 
-describe('afterFailure', () => {
-  it('starts a new window', () => {
-    expect(afterFailure(null, NOW)).toEqual({ windowStart: NOW, count: 1 });
-  });
-
-  it('increments inside the window', () => {
-    const start = minutesAgo(3);
-    expect(afterFailure({ windowStart: start, count: 2 }, NOW)).toEqual({ windowStart: start, count: 3 });
-  });
-
-  it('resets after the window', () => {
-    expect(afterFailure({ windowStart: minutesAgo(16), count: 5 }, NOW)).toEqual({ windowStart: NOW, count: 1 });
+describe('toSqlDateTime', () => {
+  it('formats a UTC date as YYYY-MM-DD HH:MM:SS', () => {
+    expect(toSqlDateTime(new Date('2026-09-28T12:34:56.789Z'))).toBe('2026-09-28 12:34:56');
   });
 });
 
@@ -44,5 +25,33 @@ describe('hashIp', () => {
     expect(a).toMatch(/^[0-9a-f]{64}$/);
     expect(hashIp('1.2.3.4', 'x'.repeat(32))).toBe(a);
     expect(hashIp('1.2.3.4', 'y'.repeat(32))).not.toBe(a);
+  });
+});
+
+describe('buildReserveAttemptQuery', () => {
+  it('assigns count before window_start in the SET clause', () => {
+    // MySQL/TiDB evaluate ON DUPLICATE KEY UPDATE assignments left to right, and the
+    // count expression reads window_start: if window_start were reassigned first,
+    // count would see the new value instead of the value stored before this statement.
+    const now = new Date('2026-09-28T12:00:00Z');
+    const dialect = new MySqlDialect();
+
+    const { sql: text } = dialect.sqlToQuery(buildReserveAttemptQuery('x'.repeat(64), now));
+
+    const countIdx = text.indexOf('`count` =');
+    const windowIdx = text.indexOf('`window_start` =');
+    expect(countIdx).toBeGreaterThan(-1);
+    expect(windowIdx).toBeGreaterThan(-1);
+    expect(countIdx).toBeLessThan(windowIdx);
+  });
+
+  it('does not qualify the SET target columns with the table name', () => {
+    const now = new Date('2026-09-28T12:00:00Z');
+    const dialect = new MySqlDialect();
+    const { sql: text } = dialect.sqlToQuery(buildReserveAttemptQuery('x'.repeat(64), now));
+
+    expect(text).toContain('on duplicate key update');
+    expect(text).not.toContain('login_attempts`.`count` =');
+    expect(text).not.toContain('login_attempts`.`window_start` =');
   });
 });
