@@ -12,6 +12,8 @@ export function buildCsp(nonce: string, isDev: boolean): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    "frame-src 'none'",
+    "manifest-src 'self'",
   ];
   // Fara upgrade-insecure-requests: Vercel forteaza HTTPS + HSTS, iar directiva ar strica testele E2E pe http://localhost.
   return directives.join('; ');

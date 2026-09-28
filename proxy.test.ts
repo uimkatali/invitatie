@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { proxy } from './proxy';
 import { signSession, SESSION_COOKIE } from './lib/auth/session';
@@ -25,6 +25,7 @@ describe('proxy', () => {
   it('returns 401 for api routes without a session', async () => {
     const res = await proxy(new NextRequest('http://localhost/api/photos/x'));
     expect(res.status).toBe(401);
+    expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
   });
 
   it('lets /login through without a session, with a CSP nonce', async () => {
@@ -42,11 +43,45 @@ describe('proxy', () => {
   it('lets authenticated requests through', async () => {
     const res = await proxy(await withSession('http://localhost/'));
     expect(res.status).toBe(200);
+    // NextResponse.next({ request: { headers } }) surfaces the forwarded request headers
+    // on the response as x-middleware-request-<header>.
+    expect(res.headers.get('x-middleware-request-content-security-policy')).toContain("frame-ancestors 'none'");
+    expect(res.headers.get('x-middleware-request-x-nonce')).toBeTruthy();
   });
 
   it('treats a forged cookie as no session', async () => {
     const req = new NextRequest('http://localhost/', { headers: { cookie: `${SESSION_COOKIE}=forged.token.value` } });
     const res = await proxy(req);
     expect(res.status).toBe(307);
+  });
+
+  it('lets an unauthenticated Server Action POST through (the action itself calls requireSession())', async () => {
+    const req = new NextRequest('http://localhost/', { method: 'POST', headers: { 'next-action': 'abc123' } });
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-request-content-security-policy')).toBeTruthy();
+    expect(res.headers.get('x-middleware-request-x-nonce')).toBeTruthy();
+  });
+
+  it('lets an unauthenticated POST to /login through', async () => {
+    const req = new NextRequest('http://localhost/login', { method: 'POST' });
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+  });
+
+  it('logs once and fails closed when SESSION_SECRET is invalid, even for a validly-signed token', async () => {
+    const validToken = await signSession('el', SECRET);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const original = process.env.SESSION_SECRET;
+    delete process.env.SESSION_SECRET;
+    try {
+      const req = new NextRequest('http://localhost/', { headers: { cookie: `${SESSION_COOKIE}=${validToken}` } });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('session_secret_invalid'));
+    } finally {
+      process.env.SESSION_SECRET = original;
+      errorSpy.mockRestore();
+    }
   });
 });

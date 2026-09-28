@@ -9,6 +9,8 @@ describe('buildCsp', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
+    expect(csp).toContain("frame-src 'none'");
+    expect(csp).toContain("manifest-src 'self'");
     expect(csp).not.toContain('unsafe-eval');
     expect(csp).not.toContain('ws:');
   });
