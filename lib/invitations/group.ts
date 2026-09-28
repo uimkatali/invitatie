@@ -25,7 +25,7 @@ export function groupInvitations<T extends Groupable>(list: readonly T[], me: Us
     if (inv.status === 'accepted') {
       (start > t ? upcoming : history).push(inv);
     } else if (inv.status === 'pending' || inv.status === 'reschedule') {
-      const latest = Math.max(start, inv.proposedAt?.getTime() ?? 0);
+      const latest = inv.status === 'reschedule' && inv.proposedAt ? inv.proposedAt.getTime() : start;
       if (latest <= t) {
         history.push(inv);
         continue;
@@ -38,9 +38,10 @@ export function groupInvitations<T extends Groupable>(list: readonly T[], me: Us
   }
 
   const byStart = (a: T, b: T) => a.startsAt.getTime() - b.startsAt.getTime();
+  const byAwaiting = (a: T, b: T) => (a.proposedAt ?? a.startsAt).getTime() - (b.proposedAt ?? b.startsAt).getTime();
   upcoming.sort(byStart);
-  awaitingMe.sort(byStart);
-  awaitingOther.sort(byStart);
+  awaitingMe.sort(byAwaiting);
+  awaitingOther.sort(byAwaiting);
   history.sort((a, b) => byStart(b, a));
 
   return { next: upcoming[0] ?? null, upcoming: upcoming.slice(1), awaitingMe, awaitingOther, history };

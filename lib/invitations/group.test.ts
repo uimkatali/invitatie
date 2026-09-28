@@ -47,4 +47,23 @@ describe('groupInvitations', () => {
   it('returns empty groups for an empty list', () => {
     expect(groupInvitations([], 'el', NOW)).toEqual({ next: null, upcoming: [], awaitingMe: [], awaitingOther: [], history: [] });
   });
+
+  it('treats a reschedule as expired once the proposed time passed, even if startsAt is still future', () => {
+    const g = groupInvitations(
+      [row('resched-expired-proposal', { status: 'reschedule', startsAt: at('2026-12-01T17:00:00Z'), proposedAt: at('2026-09-01T17:00:00Z') })],
+      'el',
+      NOW,
+    );
+    expect(g.history.map((i) => i.id)).toEqual(['resched-expired-proposal']);
+    expect(g.awaitingMe).toEqual([]);
+  });
+
+  it('orders awaitingMe reschedule rows by the proposed time, not startsAt', () => {
+    const rescheds: Row[] = [
+      row('proposal-later-start-sooner', { status: 'reschedule', startsAt: at('2026-10-01T17:00:00Z'), proposedAt: at('2026-10-20T17:00:00Z') }),
+      row('proposal-sooner-start-later', { status: 'reschedule', startsAt: at('2026-10-30T17:00:00Z'), proposedAt: at('2026-10-05T17:00:00Z') }),
+    ];
+    const g = groupInvitations(rescheds, 'el', NOW);
+    expect(g.awaitingMe.map((i) => i.id)).toEqual(['proposal-sooner-start-later', 'proposal-later-start-sooner']);
+  });
 });
