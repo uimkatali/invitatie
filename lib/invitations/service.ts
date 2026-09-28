@@ -47,7 +47,7 @@ export async function createInvitation(
       createdAt: now,
       updatedAt: now,
     });
-    await insertNotification(tx, { recipient: toUser, type: 'invite_new', invitationId: id, now });
+    await insertNotification(tx, { recipient: toUser, type: 'invite_new', invitationId: id, invitationStatus: 'pending', now });
   });
 
   return ok({ id, event: { recipient: toUser, actor, type: 'invite_new', invitationId: id, title: input.title } });
@@ -84,7 +84,13 @@ export async function applyInvitationAction(
       return;
     }
 
-    await insertNotification(tx, { recipient, type: t.notification, invitationId: inv.id, now });
+    await insertNotification(tx, {
+      recipient,
+      type: t.notification,
+      invitationId: inv.id,
+      invitationStatus: t.changes.status,
+      now,
+    });
   });
 
   if (staleStatus) {

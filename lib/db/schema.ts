@@ -102,6 +102,8 @@ export const notifications = mysqlTable(
     id: uuid('id').primaryKey(),
     recipient: userColumn('recipient').notNull(),
     type: mysqlEnum('type', NOTIFICATION_TYPES).notNull(),
+    // Statusul invitatiei in momentul notificarii (nu statusul ei curent, care se poate schimba ulterior).
+    invitationStatus: mysqlEnum('invitation_status', INVITATION_STATUSES),
     invitationId: uuid('invitation_id').references(() => invitations.id, { onDelete: 'cascade' }),
     readAt: utc('read_at'),
     createdAt: utc('created_at').notNull(),

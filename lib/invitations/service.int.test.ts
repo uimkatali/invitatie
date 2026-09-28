@@ -4,7 +4,7 @@ import { hasTestDb, testDb, resetDb } from '@/test/db';
 import { notifications } from '@/lib/db/schema';
 import { createInvitation, applyInvitationAction } from './service';
 import { getInvitation, listDashboardInvitations } from './queries';
-import { countUnread, markReadForInvitation } from '../notifications/queries';
+import { countUnread, listNotifications, markReadForInvitation } from '../notifications/queries';
 import type { InvitationInput } from '../validation';
 
 const NOW = new Date('2026-09-28T12:00:00Z');
@@ -86,6 +86,19 @@ describe.skipIf(!hasTestDb)('invitation service', () => {
     expect(inv?.status).toBe('accepted');
     expect(inv?.startsAt.toISOString()).toBe(proposedAt.toISOString());
     expect(inv?.proposedAt).toBeNull();
+  });
+
+  it('keeps the notified status frozen at notification time (reschedule, not the later accepted status)', async () => {
+    const id = await created();
+    const proposedAt = new Date('2026-10-06T18:00:00Z');
+    expect((await applyInvitationAction(db, 'ea', id, { type: 'reschedule', proposedAt }, NOW)).ok).toBe(true);
+    expect((await applyInvitationAction(db, 'el', id, { type: 'acceptProposal' }, NOW)).ok).toBe(true);
+
+    // Invitatia e acum 'accepted', dar notificarea de raspuns trebuie sa pastreze
+    // statusul de la momentul in care a fost creata: 'reschedule'.
+    const list = await listNotifications(db, 'el');
+    const response = list.find((n) => n.type === 'invite_response');
+    expect(response).toMatchObject({ status: 'reschedule' });
   });
 
   it('only the creator can cancel', async () => {

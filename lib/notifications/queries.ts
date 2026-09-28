@@ -27,15 +27,17 @@ export async function listNotifications(db: Db, user: UserId, limit = 100): Prom
       id: notifications.id,
       type: notifications.type,
       invitationId: notifications.invitationId,
+      // Titlul se ia din invitatie (nu se schimba), dar statusul e cel salvat la momentul
+      // notificarii - invitatia poate fi intr-o alta stare acum.
       title: invitations.title,
-      status: invitations.status,
+      status: notifications.invitationStatus,
       readAt: notifications.readAt,
       createdAt: notifications.createdAt,
     })
     .from(notifications)
     .leftJoin(invitations, eq(notifications.invitationId, invitations.id))
     .where(eq(notifications.recipient, user))
-    .orderBy(desc(notifications.createdAt))
+    .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .limit(limit);
 }
 
