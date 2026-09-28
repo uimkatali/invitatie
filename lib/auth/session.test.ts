@@ -50,4 +50,29 @@ describe('session', () => {
     const token = await signSession('el', SECRET, NOW);
     expect(await verifySession(token, 'short', NOW)).toBeNull();
   });
+
+  it('rejects a token signed with HS512 instead of HS256', async () => {
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS512' })
+      .setSubject('el')
+      .setAudience('session')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(SECRET));
+    expect(await verifySession(token, SECRET, NOW)).toBeNull();
+  });
+
+  it('rejects a token without the expected audience', async () => {
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject('el')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(SECRET));
+    expect(await verifySession(token, SECRET, NOW)).toBeNull();
+  });
+
+  it('throws when signing with a secret shorter than 32 characters', async () => {
+    await expect(signSession('el', 'short', NOW)).rejects.toThrow(/32/);
+  });
 });
