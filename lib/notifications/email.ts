@@ -23,9 +23,14 @@ export function shouldEmail(event: NotificationEvent): boolean {
   return event.recipient === 'el' && EMAIL_TYPES.has(event.type);
 }
 
+// Orice caracter de control (inclusiv \r\n\t), NEL (U+0085) sau separatorii Unicode de
+// linie/paragraf (U+2028/U+2029): titlul invitatiei e text introdus de utilizator si nu
+// trebuie sa poata rupe subiectul emailului pe mai multe randuri sau injecta antete noi.
+const LINE_BREAKING_CHARS = /[\u0000-\u001f\u007f\u0085\u2028\u2029]+/g;
+
 export function buildNotificationEmail(event: NotificationEvent, actorName: string, baseUrl: string) {
   const summary = describeNotification({ type: event.type, actorName, title: event.title, status: event.status });
-  const oneLine = summary.replace(/[\r\n]+/g, ' ');
+  const oneLine = summary.replace(LINE_BREAKING_CHARS, ' ');
   const link = `${baseUrl}${notificationHref(event.type, event.invitationId)}`;
   const html = `<!doctype html>
 <html lang="ro"><body style="margin:0;padding:24px;background:#fff8fb;font-family:Arial,sans-serif;color:#3a2540;">

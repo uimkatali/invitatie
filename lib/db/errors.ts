@@ -40,3 +40,17 @@ export function isTxConflict(err: unknown): boolean {
   if (code !== null && CONFLICT_CODES.has(code)) return true;
   return CONFLICT_MESSAGE.test(driverErrorMessage(err));
 }
+
+// 1452: MySQL/TiDB "cannot add or update a child row: a foreign key constraint fails".
+const FK_VIOLATION_CODE = '1452';
+const FK_VIOLATION_MESSAGE = /foreign key constraint fails/i;
+
+/**
+ * true daca INSERT-ul a esuat pentru ca o cheie straina (ex. idea_id) nu mai exista -
+ * de exemplu ideea a fost stearsa intre validarea din service si INSERT-ul propriu-zis.
+ */
+export function isForeignKeyViolation(err: unknown): boolean {
+  const code = driverErrorCode(err);
+  if (code === FK_VIOLATION_CODE) return true;
+  return FK_VIOLATION_MESSAGE.test(driverErrorMessage(err));
+}

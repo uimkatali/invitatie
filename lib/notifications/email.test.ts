@@ -6,7 +6,7 @@ const event: NotificationEvent = {
   actor: 'ea',
   type: 'invite_new',
   invitationId: '11111111-1111-4111-8111-111111111111',
-  title: '<script>alert(1)</script>\r\nBcc: x@evil.com',
+  title: '<script>alert(1)</script>\r\nBcc:\tx@evil.com\u2028Subject: alta',
 };
 
 describe('shouldEmail', () => {
@@ -27,7 +27,9 @@ describe('buildNotificationEmail', () => {
   });
 
   it('keeps the subject on one line', () => {
-    expect(email.subject).not.toMatch(/[\r\n]/);
+    // Nu doar \r\n: si tab-uri si separatori Unicode de linie/paragraf (U+2028/U+2029)
+    // pot rupe subiectul unui email pe mai multe randuri la unele clienti.
+    expect(email.subject).not.toMatch(/[\u0000-\u001f\u007f\u0085\u2028\u2029]/);
   });
 
   it('links to the invitation', () => {

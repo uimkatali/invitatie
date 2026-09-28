@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTxConflict } from './errors';
+import { isForeignKeyViolation, isTxConflict } from './errors';
 
 describe('isTxConflict', () => {
   it('recognizes a TiDB write-conflict DatabaseError (code 9007)', () => {
@@ -34,5 +34,39 @@ describe('isTxConflict', () => {
     expect(isTxConflict(undefined)).toBe(false);
     expect(isTxConflict('nope')).toBe(false);
     expect(isTxConflict({})).toBe(false);
+  });
+});
+
+describe('isForeignKeyViolation', () => {
+  it('recognizes a MySQL FK violation (code 1452)', () => {
+    expect(
+      isForeignKeyViolation({
+        message: 'foreign key constraint fails',
+        details: { code: '1452', message: 'Cannot add or update a child row: a foreign key constraint fails' },
+      }),
+    ).toBe(true);
+  });
+
+  it('recognizes a numeric details.code too', () => {
+    expect(isForeignKeyViolation({ details: { code: 1452 } })).toBe(true);
+  });
+
+  it('falls back to matching the message when there is no details.code', () => {
+    expect(isForeignKeyViolation(new Error('a foreign key constraint fails'))).toBe(true);
+  });
+
+  it('rejects an unrelated error code', () => {
+    expect(isForeignKeyViolation({ details: { code: '1062', message: 'Duplicate entry' } })).toBe(false);
+  });
+
+  it('rejects a plain error unrelated to foreign keys', () => {
+    expect(isForeignKeyViolation(new Error('boom'))).toBe(false);
+  });
+
+  it('is false for non-error, non-object, or empty values', () => {
+    expect(isForeignKeyViolation(null)).toBe(false);
+    expect(isForeignKeyViolation(undefined)).toBe(false);
+    expect(isForeignKeyViolation('nope')).toBe(false);
+    expect(isForeignKeyViolation({})).toBe(false);
   });
 });

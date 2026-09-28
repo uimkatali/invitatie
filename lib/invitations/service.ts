@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { affectedRows, type Db } from '../db/client';
-import { isTxConflict } from '../db/errors';
+import { isForeignKeyViolation, isTxConflict } from '../db/errors';
 import { ideas, invitations } from '../db/schema';
 import { otherUser, type UserId } from '../domain';
 import { newId } from '../ids';
@@ -35,26 +35,33 @@ export async function createInvitation(
 
   const id = newId();
   const toUser = otherUser(actor);
-  await db.transaction(async (tx) => {
-    await tx.insert(invitations).values({
-      id,
-      fromUser: actor,
-      toUser,
-      title: input.title,
-      message: input.message,
-      location: input.location,
-      startsAt: input.startsAt,
-      dressCode: input.dressCode,
-      theme: input.theme,
-      status: 'pending',
-      proposedAt: null,
-      responseNote: null,
-      ideaId: input.ideaId,
-      createdAt: now,
-      updatedAt: now,
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(invitations).values({
+        id,
+        fromUser: actor,
+        toUser,
+        title: input.title,
+        message: input.message,
+        location: input.location,
+        startsAt: input.startsAt,
+        dressCode: input.dressCode,
+        theme: input.theme,
+        status: 'pending',
+        proposedAt: null,
+        responseNote: null,
+        ideaId: input.ideaId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await insertNotification(tx, { recipient: toUser, type: 'invite_new', invitationId: id, invitationStatus: 'pending', now });
     });
-    await insertNotification(tx, { recipient: toUser, type: 'invite_new', invitationId: id, invitationStatus: 'pending', now });
-  });
+  } catch (err) {
+    // Ideea a fost stearsa intre verificarea de mai sus si acest INSERT (race rara):
+    // tratam esecul FK la fel ca o idee inexistenta.
+    if (isForeignKeyViolation(err)) return failure('invalid', 'Ideea nu mai exista.');
+    throw err;
+  }
 
   return ok({ id, event: { recipient: toUser, actor, type: 'invite_new', invitationId: id, title: input.title } });
 }

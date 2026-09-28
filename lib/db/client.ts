@@ -27,9 +27,10 @@ export function getDb(): Db {
 
 /**
  * Numarul de randuri afectate de un UPDATE/DELETE, indiferent de forma exacta a
- * rezultatului. Driverul @tidbcloud/serverless intoarce un `FullResult` cu
- * `rowsAffected: number | null`; alte drivere (ex. mysql2, folosit in teste) intorc
- * un `ResultSetHeader`-like cu `affectedRows: number`. Nicio forma recunoscuta => 0.
+ * rezultatului. Driverul @tidbcloud/serverless (folosit la runtime) intoarce un
+ * `FullResult` cu `rowsAffected: number | null`; pastram si un fallback pentru un
+ * `ResultSetHeader`-like cu `affectedRows: number`, forma folosita de mysql2 (driverul
+ * din spatele lui `drizzle-kit migrate`, nu al testelor). Nicio forma recunoscuta => 0.
  */
 export function affectedRows(result: unknown): number {
   if (!result || typeof result !== 'object') return 0;
