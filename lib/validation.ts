@@ -22,7 +22,9 @@ const localDateTime = z.string().transform((value, ctx) => {
 });
 
 const optionalUuid = z
-  .union([z.literal(''), z.uuid('Id invalid')])
+  .string()
+  .transform((v) => v.toLowerCase())
+  .pipe(z.union([z.literal(''), z.uuid('Id invalid')]))
   .transform((v) => (v === '' ? null : v));
 
 export const invitationSchema = z.object({
@@ -39,10 +41,14 @@ export type InvitationInput = z.infer<typeof invitationSchema>;
 
 const note = optionalText(LIMITS.responseNoteMax);
 
-export const respondSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('accept'), note }),
-  z.object({ action: z.literal('decline'), note }),
-  z.object({ action: z.literal('reschedule'), proposedAt: localDateTime, note }),
-]);
+export const respondSchema = z.discriminatedUnion(
+  'action',
+  [
+    z.object({ action: z.literal('accept'), note }),
+    z.object({ action: z.literal('decline'), note }),
+    z.object({ action: z.literal('reschedule'), proposedAt: localDateTime, note }),
+  ],
+  { error: 'Alege un raspuns' },
+);
 
 export type RespondInput = z.infer<typeof respondSchema>;

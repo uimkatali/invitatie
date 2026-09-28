@@ -38,6 +38,13 @@ describe('invitationSchema', () => {
   it('rejects an idea id that is not a uuid', () => {
     expect(invitationSchema.safeParse({ ...base, ideaId: "1' OR 1=1" }).success).toBe(false);
   });
+
+  it('normalizes an uppercase idea id to lowercase', () => {
+    const r = invitationSchema.safeParse({ ...base, ideaId: '550E8400-E29B-41D4-A716-446655440000' });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.ideaId).toBe('550e8400-e29b-41d4-a716-446655440000');
+  });
 });
 
 describe('respondSchema', () => {
@@ -53,6 +60,9 @@ describe('respondSchema', () => {
   });
 
   it('rejects unknown actions', () => {
-    expect(respondSchema.safeParse({ action: 'cancel', note: '' }).success).toBe(false);
+    const r = respondSchema.safeParse({ action: 'cancel', note: '' });
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.error.issues[0]?.message).toBe('Alege un raspuns');
   });
 });
