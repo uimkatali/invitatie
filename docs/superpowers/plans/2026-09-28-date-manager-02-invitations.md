@@ -1484,9 +1484,12 @@ export default function AppHeader({ name, items }: AppHeaderProps) {
           <Link key={item.href} href={item.href} className="nav-link">
             {item.label}
             {item.badge ? (
-              <span className="badge" aria-label={`${item.badge} necitite`}>
-                {item.badge}
-              </span>
+              <>
+                <span className="badge" aria-hidden="true">
+                  {item.badge}
+                </span>
+                <span className="sr-only">{item.badge} necitite</span>
+              </>
             ) : null}
           </Link>
         ))}
@@ -1542,7 +1545,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 .notification { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 14px 18px; }
 .notification.unread { border-left: 4px solid var(--pink-300); }
 .notification a { text-decoration: none; font-weight: 500; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 640px) {
   .details-list div { grid-template-columns: 1fr; }
   .notification { flex-direction: column; }

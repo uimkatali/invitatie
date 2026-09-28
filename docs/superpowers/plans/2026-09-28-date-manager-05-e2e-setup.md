@@ -207,7 +207,7 @@ test('invitation: create, propose another time, accept the proposal', async ({ p
   await logout(page);
 
   await login(page, 'ea');
-  await expect(page.getByLabel('1 necitite')).toBeVisible();
+  await expect(page.getByText('1 necitite')).toBeAttached();
   await page.goto(invitationUrl);
   await expect(page.locator('.exp-title')).toHaveText('Cina E2E');
   await page.getByText('Propun alta ora').click();
