@@ -684,11 +684,11 @@ Deschide `.env.local` in editor si completeaza:
 | `BLOB_READ_WRITE_TOKEN` | de la pasul 3.1 |
 | `APP_URL` | lasa gol local |
 
-Pentru fiecare parola:
+Pentru fiecare parola, ruleaza comanda din **PowerShell** sau **cmd** (in Git Bash parola se vede pe ecran cand o tastezi; acolo foloseste `winpty npm run hash-password`):
 ```bash
 npm run hash-password
 ```
-Scrie parola, apoi repeta-o. Comanda afiseaza un rand lung (base64): copiaza-l **intreg** in variabila `..._PASSWORD_HASH`. Parola in clar nu se salveaza nicaieri.
+Parola trebuie sa aiba minim 12 caractere (ideal 3-4 cuvinte, ex. `elefant roz danseaza tango`). Scrie parola, apoi repeta-o. Comanda afiseaza un rand lung (base64): copiaza-l **intreg** in variabila `..._PASSWORD_HASH`. Parola in clar nu se salveaza nicaieri.
 
 Username-urile nu tin cont de litere mari / mici. Parolele da.
 

@@ -29,7 +29,8 @@ const schema = z
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
   })
   .superRefine((env, ctx) => {
-    if (env.USER_EL_NAME.toLowerCase() === env.USER_EA_NAME.toLowerCase()) {
+    const norm = (v: string) => v.trim().toLowerCase().normalize('NFC');
+    if (norm(env.USER_EL_NAME) === norm(env.USER_EA_NAME)) {
       ctx.addIssue({ code: 'custom', path: ['USER_EA_NAME'], message: 'trebuie sa difere de USER_EL_NAME' });
     }
   });
