@@ -24,3 +24,17 @@ export function getDb(): Db {
   if (!db) db = createDb(env().DATABASE_URL);
   return db;
 }
+
+/**
+ * Numarul de randuri afectate de un UPDATE/DELETE, indiferent de forma exacta a
+ * rezultatului. Driverul @tidbcloud/serverless intoarce un `FullResult` cu
+ * `rowsAffected: number | null`; alte drivere (ex. mysql2, folosit in teste) intorc
+ * un `ResultSetHeader`-like cu `affectedRows: number`. Nicio forma recunoscuta => 0.
+ */
+export function affectedRows(result: unknown): number {
+  if (!result || typeof result !== 'object') return 0;
+  const r = result as { rowsAffected?: number | null; affectedRows?: number | null };
+  if (typeof r.rowsAffected === 'number') return r.rowsAffected;
+  if (typeof r.affectedRows === 'number') return r.affectedRows;
+  return 0;
+}

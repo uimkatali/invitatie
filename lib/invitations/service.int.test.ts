@@ -47,6 +47,16 @@ describe.skipIf(!hasTestDb)('invitation service', () => {
     expect(r).toMatchObject({ ok: false, code: 'invalid', fields: { startsAt: expect.any(String) } });
   });
 
+  it('rejects a start date more than 2 years in the future', async () => {
+    const tooFar = new Date(NOW.getTime() + 2 * 365 * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000);
+    const r = await createInvitation(db, 'el', { ...input, startsAt: tooFar }, NOW);
+    expect(r).toMatchObject({
+      ok: false,
+      code: 'invalid',
+      fields: { startsAt: 'Alege o data in urmatorii 2 ani' },
+    });
+  });
+
   it('rejects an idea id that does not exist', async () => {
     const r = await createInvitation(db, 'el', { ...input, ideaId: '22222222-2222-4222-8222-222222222222' }, NOW);
     expect(r).toMatchObject({ ok: false, code: 'invalid' });
@@ -107,5 +117,36 @@ describe.skipIf(!hasTestDb)('invitation service', () => {
     expect(await countUnread(db, 'ea')).toBe(0);
     const rows = await db.select().from(notifications).where(eq(notifications.invitationId, id));
     expect(rows[0].readAt).not.toBeNull();
+  });
+
+  it('rejects a second action once the status has already moved on (stale status)', async () => {
+    const id = await created();
+    const first = await applyInvitationAction(db, 'ea', id, { type: 'accept' }, NOW);
+    expect(first.ok).toBe(true);
+
+    const second = await applyInvitationAction(db, 'ea', id, { type: 'decline' }, NOW);
+    expect(second).toMatchObject({ ok: false, code: 'invalid' });
+
+    expect((await getInvitation(db, id))?.status).toBe('accepted');
+    // Doar notificarea din primul accept: a doua incercare nu a inserat nimic.
+    const rows = await db.select().from(notifications).where(eq(notifications.invitationId, id));
+    expect(rows.filter((r) => r.type === 'invite_response')).toHaveLength(1);
+  });
+
+  it('lets exactly one of two concurrent responses win', async () => {
+    const id = await created();
+    const [a, b] = await Promise.all([
+      applyInvitationAction(db, 'ea', id, { type: 'accept' }, NOW),
+      applyInvitationAction(db, 'ea', id, { type: 'decline' }, NOW),
+    ]);
+    const results = [a, b];
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toHaveLength(1);
+
+    const inv = await getInvitation(db, id);
+    expect(['accepted', 'declined']).toContain(inv?.status);
+
+    const rows = await db.select().from(notifications).where(eq(notifications.invitationId, id));
+    expect(rows.filter((r) => r.type === 'invite_response')).toHaveLength(1);
   });
 });

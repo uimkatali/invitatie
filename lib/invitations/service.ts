@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import type { Db } from '../db/client';
+import { affectedRows, type Db } from '../db/client';
 import { ideas, invitations } from '../db/schema';
 import { otherUser, type UserId } from '../domain';
 import { newId } from '../ids';
@@ -8,7 +8,7 @@ import type { InvitationInput } from '../validation';
 import { insertNotification } from '../notifications/create';
 import type { NotificationEvent } from '../notifications/email';
 import { getInvitation } from './queries';
-import { transition, type InvitationAction } from './state-machine';
+import { isTooFarInFuture, transition, type InvitationAction } from './state-machine';
 
 export async function createInvitation(
   db: Db,
@@ -18,6 +18,9 @@ export async function createInvitation(
 ): Promise<Result<{ id: string; event: NotificationEvent }>> {
   if (input.startsAt.getTime() <= now.getTime()) {
     return failure('invalid', 'Verifica campurile marcate.', { startsAt: 'Alege o data din viitor' });
+  }
+  if (isTooFarInFuture(input.startsAt, now)) {
+    return failure('invalid', 'Verifica campurile marcate.', { startsAt: 'Alege o data in urmatorii 2 ani' });
   }
   if (input.ideaId) {
     const [idea] = await db.select({ id: ideas.id }).from(ideas).where(eq(ideas.id, input.ideaId)).limit(1);
@@ -65,14 +68,28 @@ export async function applyInvitationAction(
   if (!t.ok) return failure(t.code, t.error, t.fields);
 
   const recipient = otherUser(actor);
+  let staleStatus = false;
+
   await db.transaction(async (tx) => {
-    await tx
+    const updateResult = await tx
       .update(invitations)
       .set({ ...t.changes, ...(t.isResponse ? { responseNote: note } : {}), updatedAt: now })
       // Conditia pe status previne aplicarea unei tranzitii peste o stare schimbata intre timp.
       .where(and(eq(invitations.id, inv.id), eq(invitations.status, inv.status)));
+
+    if (affectedRows(updateResult) === 0) {
+      // O alta cerere a schimbat deja statusul intre citire si acest update: nu inseram
+      // notificarea si nu trimitem email pentru o actiune care nu s-a aplicat de fapt.
+      staleStatus = true;
+      return;
+    }
+
     await insertNotification(tx, { recipient, type: t.notification, invitationId: inv.id, now });
   });
+
+  if (staleStatus) {
+    return failure('invalid', 'Invitatia s-a schimbat intre timp. Reincarca pagina.');
+  }
 
   return ok({
     event: {
