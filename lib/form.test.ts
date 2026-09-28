@@ -20,4 +20,12 @@ describe('toFieldErrors', () => {
     expect(fields.title).toBe('Obligatoriu');
     expect(fields.age).toBeTruthy();
   });
+
+  it('records a message for a field named constructor (not an inherited property)', () => {
+    const schema = z.object({ constructor: z.string().min(1, 'Obligatoriu') });
+    const result = schema.safeParse({ constructor: '' });
+    if (result.success) throw new Error('expected failure');
+    const fields = toFieldErrors(result.error);
+    expect(fields.constructor).toBe('Obligatoriu');
+  });
 });
