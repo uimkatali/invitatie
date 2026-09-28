@@ -9,7 +9,7 @@ Aplicatia veche (invitatie misterioasa unidirectionala + formular de selectii) s
 
 ### In scope (v1)
 1. Invitatii la date (creare, raspuns Da / Nu / Propun alta ora, anulare)
-2. Dashboard: Urmatoare, In asteptare (Primite / Trimise), Istoric
+2. Dashboard: Urmatoare, In asteptare (Asteapta raspunsul tau / Asteapta raspuns de la celalalt), Istoric
 3. Amintiri dupa date: nota + rating 1-5 + poze, cate una per user per date
 4. Poze pe amintiri (Vercel Blob, servite privat)
 5. Lista de idei, transformabila in invitatie
@@ -179,7 +179,7 @@ FK-urile cu cascade nu sterg fisierele din Blob. `deletePhotosFor(memoryIds)` st
 | Ruta | Continut | 3D |
 |---|---|---|
 | `/login` | user + parola | ambient "amandoua" |
-| `/` | Dashboard: hero cu urmatorul date + countdown, apoi Urmatoare, In asteptare (Primite / Trimise), Istoric | ambient "amandoua" |
+| `/` | Dashboard: hero cu urmatorul date + countdown, apoi Urmatoare, In asteptare (Asteapta raspunsul tau / Asteapta raspuns de la celalalt), Istoric | ambient "amandoua" |
 | `/calendar` | vedere lunara, zilele cu dateuri marcate (culoare dupa status), click -> invitatia; navigare luna anterioara / urmatoare prin `?luna=YYYY-MM` | ambient "amandoua" |
 | `/invitatii/noua` | formular: titlu, mesaj, loc, data + ora, dress code, tema (cu preview live). `?idee=<id>` precompleteaza titlul si descrierea | ambient, tema aleasa |
 | `/invitatii/[id]` | detaliu, dupa rol si status (mai jos) | scroll-driven sau ambient |
@@ -202,7 +202,7 @@ Header global: logo, badge notificari necitite, linkuri Calendar / Idei / Invita
 ```
 pending    --(destinatar)--> accepted | declined | reschedule
 reschedule --(creator)-----> accepted (starts_at = proposed_at, proposed_at = null) | cancelled
-pending | accepted cu starts_at in viitor --(creator)--> cancelled
+pending (starts_at viitor) | reschedule (ora propusa viitoare) | accepted (starts_at viitor) --(creator)--> cancelled
 ```
 Implementata ca functie pura `transition(invitation, actor, action, now)` care intoarce noua stare sau o eroare. Orice alta tranzitie e respinsa. Actorul vine din sesiune.
 
