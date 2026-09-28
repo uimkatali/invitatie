@@ -23,8 +23,11 @@ const loginSchema = z.object({
 
 export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const values = pickStrings(formData, ['username', 'password']);
+  // Ecoul din formular e limitat la 100 caractere indiferent de ramura: username-ul brut
+  // (nevalidat inca) poate depasi lungimea acceptata de schema.
+  const echo = { username: values.username.slice(0, 100) };
   const parsed = loginSchema.safeParse(values);
-  if (!parsed.success) return { ok: false, error: WRONG_CREDENTIALS, values: { username: values.username } };
+  if (!parsed.success) return { ok: false, error: WRONG_CREDENTIALS, values: echo };
 
   try {
     const e = env();
@@ -38,7 +41,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     const attempts = await reserveAttempt(db, ipHash, now);
     if (exceedsLimit(attempts)) {
       log('warn', 'login_rate_limited');
-      return { ok: false, error: TOO_MANY, values: { username: values.username } };
+      return { ok: false, error: TOO_MANY, values: echo };
     }
 
     const user = await authenticate(parsed.data.username, parsed.data.password, [
@@ -48,10 +51,12 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 
     if (!user) {
       log('warn', 'login_failed');
-      return { ok: false, error: WRONG_CREDENTIALS, values: { username: values.username } };
+      return { ok: false, error: WRONG_CREDENTIALS, values: echo };
     }
 
-    await clearAttempts(db, ipHash);
+    // Best-effort: daca stergerea esueaza, urmatorul login reusit o va relua: nu merita
+    // sa transformam un login altfel reusit intr-o eroare pentru client.
+    await clearAttempts(db, ipHash).catch((err) => log('warn', 'login_clear_attempts_failed', { reason: errorName(err) }));
     const token = await signSession(user, e.SESSION_SECRET, now);
     (await cookies()).set(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -63,7 +68,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     log('info', 'login_ok', { user });
   } catch (err) {
     log('error', 'login_error', { reason: errorName(err) });
-    return { ok: false, error: GENERIC_ERROR, values: { username: values.username } };
+    return { ok: false, error: GENERIC_ERROR, values: echo };
   }
 
   redirect('/');
