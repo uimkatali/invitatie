@@ -37,6 +37,6 @@ describe('parseEnv', () => {
   });
 
   it('lists every missing variable', () => {
-    expect(() => parseEnv({})).toThrow(/DATABASE_URL.*SESSION_SECRET/s);
+    expect(() => parseEnv({})).toThrow(new RegExp('DATABASE_URL.*SESSION_SECRET', 's'));
   });
 });
