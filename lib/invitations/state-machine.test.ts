@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transition, canPerform, type InvitationState } from './state-machine';
+import { transition, canPerform, isTooFarInFuture, MAX_FUTURE_MS, type InvitationState } from './state-machine';
 
 const NOW = new Date('2026-09-28T12:00:00Z');
 const FUTURE = new Date('2026-10-05T17:00:00Z');
@@ -33,6 +33,22 @@ describe('transition: recipient answers', () => {
   it('rejects a proposed time in the past', () => {
     const r = transition(inv(), 'ea', { type: 'reschedule', proposedAt: PAST }, NOW);
     expect(r).toMatchObject({ ok: false, code: 'invalid', fields: { proposedAt: expect.any(String) } });
+  });
+
+  it('rejects a proposal further than 2 years away', () => {
+    const tooFar = new Date(NOW.getTime() + MAX_FUTURE_MS + 24 * 60 * 60 * 1000);
+    const r = transition(inv(), 'ea', { type: 'reschedule', proposedAt: tooFar }, NOW);
+    expect(r).toMatchObject({
+      ok: false,
+      code: 'invalid',
+      fields: { proposedAt: 'Alege o data in urmatorii 2 ani' },
+    });
+  });
+
+  it('accepts a proposal right at the edge of the 2-year window', () => {
+    const edge = new Date(NOW.getTime() + MAX_FUTURE_MS - 1000);
+    const r = transition(inv(), 'ea', { type: 'reschedule', proposedAt: edge }, NOW);
+    expect(r.ok).toBe(true);
   });
 
   it('forbids the creator from answering', () => {
@@ -81,12 +97,42 @@ describe('transition: creator actions', () => {
     expect(transition(inv({ status: 'accepted', startsAt: PAST }), 'el', { type: 'cancel' }, NOW).ok).toBe(false);
   });
 
+  it('cannot cancel an expired pending invitation', () => {
+    expect(transition(inv({ status: 'pending', startsAt: PAST }), 'el', { type: 'cancel' }, NOW).ok).toBe(false);
+  });
+
+  it('cannot cancel a reschedule whose proposed time already passed, even if startsAt is future', () => {
+    expect(
+      transition(inv({ status: 'reschedule', startsAt: FUTURE, proposedAt: PAST }), 'el', { type: 'cancel' }, NOW).ok,
+    ).toBe(false);
+  });
+
+  it('can cancel a reschedule without a proposedAt while startsAt is future', () => {
+    expect(
+      transition(inv({ status: 'reschedule', startsAt: FUTURE, proposedAt: null }), 'el', { type: 'cancel' }, NOW).ok,
+    ).toBe(true);
+  });
+
   it.each(['declined', 'cancelled'] as const)('cannot cancel a %s invitation', (status) => {
     expect(transition(inv({ status }), 'el', { type: 'cancel' }, NOW).ok).toBe(false);
   });
 
   it('forbids the recipient from cancelling', () => {
     expect(transition(inv(), 'ea', { type: 'cancel' }, NOW)).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  it('returns a fresh forbidden result on every call (no shared mutable object)', () => {
+    const a = transition(inv(), 'ea', { type: 'cancel' }, NOW);
+    const b = transition(inv(), 'ea', { type: 'cancel' }, NOW);
+    expect(a).toEqual(b);
+    expect(a).not.toBe(b);
+  });
+});
+
+describe('isTooFarInFuture', () => {
+  it('flags dates beyond the 2-year horizon', () => {
+    expect(isTooFarInFuture(new Date(NOW.getTime() + MAX_FUTURE_MS + 1), NOW)).toBe(true);
+    expect(isTooFarInFuture(new Date(NOW.getTime() + MAX_FUTURE_MS - 1), NOW)).toBe(false);
   });
 });
 
