@@ -28,4 +28,13 @@ describe('authenticate', () => {
   it('password is case-sensitive', async () => {
     expect(await authenticate('catalin', 'PAROLA-EL', users)).toBeNull();
   });
+
+  it('matches usernames regardless of unicode normalization of diacritics', async () => {
+    const composed = 'Anã'.normalize('NFC');
+    const decomposed = 'Anã'.normalize('NFD');
+    const withDiacritic: UserCredential[] = [
+      { id: 'ea', name: composed, passwordHash: await hashPassword('parola-ea') },
+    ];
+    expect(await authenticate(decomposed, 'parola-ea', withDiacritic)).toBe('ea');
+  });
 });

@@ -32,6 +32,11 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, USER_EA_PASSWORD_HASH: FAKE_HASH })).toThrow(/USER_EA_PASSWORD_HASH/);
   });
 
+  it('rejects a bcrypt hash with a cost below 12', () => {
+    const weakHash = '$2b$04$' + 'a'.repeat(53);
+    expect(() => parseEnv({ ...valid, USER_EA_PASSWORD_HASH: b64(weakHash) })).toThrow(/USER_EA_PASSWORD_HASH/);
+  });
+
   it('rejects identical usernames', () => {
     expect(() => parseEnv({ ...valid, USER_EA_NAME: 'CATALIN' })).toThrow(/USER_EA_NAME/);
   });

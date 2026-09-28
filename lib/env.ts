@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-const BCRYPT_RE = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+// Cost minim 12 (trebuie sa coincida cu BCRYPT_COST din lib/auth/password.ts).
+const BCRYPT_RE = /^\$2[aby]\$(1[2-9]|[23]\d)\$[./A-Za-z0-9]{53}$/;
 
 const bcryptHashBase64 = z.string().min(1).transform((value, ctx) => {
   const decoded = Buffer.from(value, 'base64').toString('utf8');
