@@ -46,6 +46,17 @@ export function parseLocalDateTime(value: string): Date | null {
   let utc = naive - offsetMinutes(new Date(naive)) * 60000;
   utc = naive - offsetMinutes(new Date(utc)) * 60000;
 
+  // La revenirea din ora de vara (ultima duminica din octombrie) ora locala e ambigua:
+  // intervalul respectiv exista de doua ori, o data in EEST (+3) si o data in EET (+2).
+  // Iteratia de mai sus converge spre a doua aparitie (instanta mai tarzie); alegem in
+  // schimb prima aparitie (instanta mai devreme), verificand daca mutarea cu o ora in
+  // urma produce aceeasi ora locala ceruta. La trecerea la ora de vara (ultima duminica
+  // din martie) exista un gol de o ora care nu exista deloc local; iteratia de mai sus
+  // converge deja spre o instanta rezonabila pentru acel caz, iar corectia de mai jos
+  // nu se aplica (ora locala rezultata din scaderea unei ore nu mai coincide cu `value`).
+  const earlier = utc - 3_600_000;
+  if (toLocalInputValue(new Date(earlier)) === value) utc = earlier;
+
   const check = zonedParts(new Date(utc));
   if (check.year !== year || check.month !== month || check.day !== day) return null;
   return new Date(utc);

@@ -12,7 +12,12 @@ describe('parseLocalDateTime', () => {
 
   it('handles the DST gap without failing', () => {
     // 2026-03-29 03:30 nu exista in Romania (ceasul sare de la 03:00 la 04:00)
-    expect(parseLocalDateTime('2026-03-29T03:30')).not.toBeNull();
+    expect(parseLocalDateTime('2026-03-29T03:30')?.toISOString()).toBe('2026-03-29T01:30:00.000Z');
+  });
+
+  it('resolves the DST overlap to the earlier instant', () => {
+    // 2026-10-25 03:30 exista de doua ori (ceasul revine de la 04:00 la 03:00); alegem prima aparitie.
+    expect(parseLocalDateTime('2026-10-25T03:30')?.toISOString()).toBe('2026-10-25T00:30:00.000Z');
   });
 
   it('rejects malformed or impossible values', () => {
