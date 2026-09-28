@@ -165,3 +165,21 @@ fieldset { border: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
 }
+
+/* Faza 2: invitatii si notificari */
+.hero { display: grid; gap: 12px; padding: 32px; }
+.invitation-card { display: grid; gap: 6px; text-decoration: none; transition: transform 150ms ease; }
+.invitation-card:hover { transform: translateY(-2px); }
+.invitation-message { white-space: pre-line; font-size: 1.1rem; }
+.details-list { display: grid; gap: 10px; }
+.details-list div { display: grid; grid-template-columns: 140px 1fr; gap: 8px; }
+.details-list dt { font-weight: 600; color: var(--ink-soft); }
+.notification-list { list-style: none; display: grid; gap: 10px; }
+.notification { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 14px 18px; }
+.notification.unread { border-left: 4px solid var(--pink-300); }
+.notification a { text-decoration: none; font-weight: 500; }
+@media (max-width: 640px) {
+  .details-list div { grid-template-columns: 1fr; }
+  .notification { flex-direction: column; }
+  .hero { padding: 22px; }
+}

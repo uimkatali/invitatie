@@ -7,7 +7,13 @@ export interface NavItem {
   badge?: number;
 }
 
-export const BASE_NAV: NavItem[] = [{ href: '/', label: 'Acasa' }];
+export function buildNav(unread: number): NavItem[] {
+  return [
+    { href: '/', label: 'Acasa' },
+    { href: '/invitatii/noua', label: 'Invitatie noua' },
+    { href: '/notificari', label: 'Notificari', badge: unread },
+  ];
+}
 
 interface AppHeaderProps {
   name: string;
