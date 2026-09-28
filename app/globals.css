@@ -6,14 +6,16 @@
   --blue-300: #a2d2ff;
   --cream: #fff8fb;
   --ink: #3a2540;
-  --ink-soft: #6b5570;
+  --ink-soft: #5e4863;
   --danger: #b3261e;
-  --success: #2e7d5b;
+  --success: #23664a;
+  --focus: #1f5f99;
   --glass: rgba(255, 255, 255, 0.45);
   --glass-strong: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.75);
   --shadow: 0 12px 40px rgba(58, 37, 64, 0.12);
   --radius: 20px;
+  /* Fallback-uri; suprascrise de variabilele CSS din clasele next/font (--font-display/--font-body). */
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --sky-top: var(--pink-200);
@@ -40,7 +42,19 @@ h3 { font-size: 1.15rem; }
 a { color: inherit; }
 img { max-width: 100%; display: block; }
 
-:focus-visible { outline: 3px solid var(--blue-300); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* Cer: fundal fix sub continut (si sub canvas-ul 3D din Faza 4) */
 .sky {
@@ -129,7 +143,7 @@ fieldset { border: none; }
   border-radius: 16px; border: 2px solid var(--glass-border); background: rgba(255, 255, 255, 0.6); font-weight: 600;
 }
 .choice input:checked + span { border-color: var(--pink-300); background: #fff; box-shadow: 0 4px 16px rgba(255, 175, 204, 0.45); }
-.choice input:focus-visible + span { outline: 3px solid var(--blue-300); outline-offset: 2px; }
+.choice input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 /* Status */
 .status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: #fff; }

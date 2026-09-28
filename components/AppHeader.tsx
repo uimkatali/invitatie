@@ -25,9 +25,12 @@ export default function AppHeader({ name, items }: AppHeaderProps) {
           <Link key={item.href} href={item.href} className="nav-link">
             {item.label}
             {item.badge ? (
-              <span className="badge" aria-label={`${item.badge} necitite`}>
-                {item.badge}
-              </span>
+              <>
+                <span className="badge" aria-hidden="true">
+                  {item.badge}
+                </span>
+                <span className="sr-only">{item.badge} necitite</span>
+              </>
             ) : null}
           </Link>
         ))}
