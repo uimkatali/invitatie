@@ -6,7 +6,7 @@ Manager de dateuri pentru doi: invitatii cu raspuns (Da / Nu / Propun alta ora),
 
 ## Stack
 
-Next.js 16 (App Router, Server Actions) · TiDB Cloud (Drizzle, driver HTTP) · Resend · Vercel Blob · three.js / React Three Fiber · Vitest · Playwright
+Next.js 16 (App Router, Server Actions) · TiDB Cloud (Drizzle, driver HTTP) · Resend · Vercel Blob (store privat) · three.js / React Three Fiber · Vitest · Playwright
 
 ## Pagini
 
@@ -36,6 +36,7 @@ npm run db:generate    # genereaza o migrare dupa ce modifici lib/db/schema.ts
 npm run db:migrate     # aplica migrarile pe baza din DATABASE_URL
 npm run hash-password  # hash pentru o parola noua (PowerShell / cmd; in Git Bash: winpty)
 npm run gen-secret     # SESSION_SECRET nou
+npm run check:blob     # verifica store-ul Vercel Blob din .env.local: privat, citire autentificata, stergere
 ```
 
 Testele E2E cer o data `npx playwright install chromium`. Detalii si variabilele de mediu: [SETUP.md](SETUP.md).
@@ -55,4 +56,4 @@ Testele E2E cer o data `npx playwright install chromium`. Detalii si variabilele
 
 ## Securitate
 
-Doi useri fixi din env (parole bcrypt), sesiune JWT in cookie `httpOnly` / `SameSite=Lax` / `Secure` in productie, rate limit la login (5 incercari per 15 minute), CSP strict cu nonce, poze servite doar prin server dupa verificarea sesiunii (cu CSP propriu `default-src 'none'; sandbox`), upload cu verificare de origin, dimensiune si continut. Secretele traiesc doar in `.env.local` / `.env.test.local` (ignorate de git). Detalii si verificari inainte de deploy: [docs/security-checklist.md](docs/security-checklist.md).
+Doi useri fixi din env (parole bcrypt), sesiune JWT in cookie `httpOnly` / `SameSite=Lax` / `Secure` in productie, rate limit la login (5 incercari per 15 minute), CSP strict cu nonce, poze intr-un store Vercel Blob privat, servite doar prin server dupa verificarea sesiunii (cu CSP propriu `default-src 'none'; sandbox`), upload cu verificare de origin, dimensiune si continut. Secretele traiesc doar in `.env.local` / `.env.test.local` (ignorate de git). Detalii si verificari inainte de deploy: [docs/security-checklist.md](docs/security-checklist.md).

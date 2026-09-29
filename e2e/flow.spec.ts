@@ -54,7 +54,7 @@ test('memory: note and rating on a past accepted date', async ({ page }) => {
 });
 
 test('memory photo upload is private', async ({ page, playwright, baseURL }) => {
-  test.skip(!process.env.E2E_BLOB_READ_WRITE_TOKEN, 'Necesita E2E_BLOB_READ_WRITE_TOKEN (scrie in Blob-ul real).');
+  test.skip(!process.env.E2E_BLOB_READ_WRITE_TOKEN, 'Necesita E2E_BLOB_READ_WRITE_TOKEN (tokenul unui store Blob PRIVAT real; scrie si sterge poze de test acolo).');
   const id = await seedInvitation(testDb(), { startsAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) });
   await login(page, 'el');
   await page.goto(`/invitatii/${id}`);

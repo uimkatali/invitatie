@@ -112,21 +112,37 @@ Primul e `DATABASE_URL`, al doilea e `TEST_DATABASE_URL`. Se scriu **exact** asa
 
 ## 3. Vercel: poze (Blob) si curatenie dupa aplicatia veche
 
-### 3.1 Blob store pentru poze
+### 3.1 Blob store PRIVAT pentru poze
+
+Pozele sunt personale, deci store-ul trebuie sa fie **Private**: nimeni nu poate deschide o poza fara autentificare, nici daca ar afla adresa ei. Aplicatia citeste pozele pe server, cu tokenul de mai jos, si le trimite browserului doar dupa ce verifica ca esti logat.
+
+> **Important:** "Private" sau "Public" se alege **la crearea** store-ului si **nu se mai poate schimba**. Daca ai creat deja un store Blob (de exemplu `dateuri-poze`) ca Public, sterge-l si creeaza altul Private: proiect -> **Storage** -> click pe store -> tab-ul **Settings** -> **Delete Store** (pe el nu ai poze importante). Sterge-l INAINTE de a-l crea pe cel nou, ca noua variabila sa se numeasca exact `BLOB_READ_WRITE_TOKEN`.
 
 1. Intra pe https://vercel.com -> deschide proiectul existent (`invitatie`).
-2. Tab-ul **Storage** -> **Create Database** (sau **Create**) -> alege **Blob** -> **Continue**.
-3. **Name**: `dateuri-poze`. Apasa **Create**.
-4. Cand te intreaba de conectare la proiect, alege proiectul `invitatie` si bifeaza **toate mediile** (Production, Preview, Development) -> **Connect**.
+2. Tab-ul **Storage** -> **Create Storage** -> alege **Blob** -> **Continue**.
+3. In fereastra care urmeaza seteaza **Access** pe **Private** (nu pe Public). Poti alege si o regiune apropiata (Frankfurt). **Name**: `dateuri-poze`. Apasa **Create**.
+4. Cand te intreaba de conectare la proiect, alege proiectul `invitatie` si bifeaza **toate mediile** (Production, Preview, Development) -> **Connect**. (Daca nu apare intrebarea: pagina store-ului -> tab-ul **Projects** -> **Connect to Project**.)
 5. Vercel adauga singur variabila `BLOB_READ_WRITE_TOKEN` in proiect (pentru deploy). Pentru rularea **locala** ai nevoie sa o copiezi tu:
    1. Proiect -> tab-ul **Storage** -> click pe store-ul `dateuri-poze`.
    2. In pagina store-ului cauta tab-ul **`.env.local`**: afiseaza un rand `BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."`. Apasa **Show secret** (sau **Copy Snippet**) si copiaza valoarea dintre ghilimele (incepe cu `vercel_blob_rw_`).
    3. Alternativa: proiect -> **Settings** -> **Environment Variables** -> `BLOB_READ_WRITE_TOKEN` -> iconita de ochi (**Reveal**) -> copiaza-o.
-   4. Valoarea o pui in `.env.local` la pasul 4.2 (fara ghilimele).
+   4. Deschide `.env.local` (`notepad .env.local`), gaseste randul `BLOB_READ_WRITE_TOKEN=` si lipeste valoarea dupa `=`, fara ghilimele si fara spatii. Salveaza (Ctrl+S).
+6. **Verifica ca store-ul e privat si ca merge.** In PowerShell, in folderul proiectului (pasul 0.2):
+   ```bash
+   npm run check:blob
+   ```
+   Scriptul incarca o poza minuscula de test, incearca sa o deschida fara autentificare (trebuie sa fie refuzat), o citeste inapoi cu tokenul tau si o sterge. Nu afiseaza tokenul si nici adresele. Rezultat corect:
+   ```
+   PASS  1. Incarcare privata
+   PASS  2. Cerere anonima refuzata: raspuns 403
+   PASS  3. Citire autentificata: continutul coincide
+   PASS  4. Stergere blob de test
 
-> Despre confidentialitatea pozelor: fisierele sunt stocate in Blob cu acces "public", dar cu un URL cu sufix aleator care nu ajunge niciodata in browser; aplicatia le serveste doar prin `/api/photos/...`, dupa verificarea sesiunii. Risc acceptat: cine ajunge la URL-ul brut al unei poze (din baza de date sau din loguri) o poate deschide. De aceea tratam URL-urile Blob ca pe niste secrete: nu le copia in chat si nu le publica.
+   REZULTAT: PASS. Store-ul este privat si functioneaza. Poti incarca poze.
+   ```
+   (La pasul 2 numarul poate fi altul, 401 sau 404: important e sa fie **PASS**.) Daca vezi **FAIL** la pasul 2 ("poza s-a putut citi FARA autentificare"), store-ul este Public: refa pasul de mai sus creandu-l ca **Private**. Daca scriptul spune ca tokenul lipseste sau pare provizoriu, nu ai pus inca tokenul real in `.env.local`.
 
-> Pana pui tokenul real, aplicatia porneste si totul merge, **cu exceptia pozelor**: incarcarea unei poze da eroare. Ca sa poti rula aplicatia inainte de acest pas, pune in `.env.local` la `BLOB_READ_WRITE_TOKEN` o valoare oarecare (ex. `deocamdata`); variabila nu poate lipsi.
+> Pana pui tokenul real, aplicatia porneste si totul merge, **cu exceptia pozelor**: incarcarea unei poze da eroare. Ca sa poti rula aplicatia inainte de acest pas, pune in `.env.local` la `BLOB_READ_WRITE_TOKEN` o valoare oarecare (ex. `deocamdata`); variabila nu poate lipsi. `npm run check:blob` iti spune ca valoarea e provizorie.
 
 ### 3.2 Scoate ce nu mai folosim (important pentru securitate)
 
@@ -175,7 +191,7 @@ Deschide-l ca sa-l editezi: `notepad .env.local` (se deschide in Notepad; salvea
 | `EMAIL_EL` | de la pasul 2 |
 | `EMAIL_EA` | lasa gol |
 | `RESEND_API_KEY` | de la pasul 2 |
-| `BLOB_READ_WRITE_TOKEN` | de la pasul 3.1 (sau o valoare provizorie) |
+| `BLOB_READ_WRITE_TOKEN` | de la pasul 3.1, store-ul PRIVAT (sau o valoare provizorie, pana il ai) |
 | `APP_URL` | lasa gol local |
 
 **`SESSION_SECRET`:** ruleaza `npm run gen-secret`, copiaza randul lung afisat.
@@ -249,6 +265,8 @@ Ajungi la pagina de login ("Dateurile noastre"). Logheaza-te cu unul din cele do
 
 ### 4.7 Ruleaza testele
 
+Verificarea store-ului de poze (dupa ce ai pus tokenul real): `npm run check:blob` (vezi pasul 3.1).
+
 Testele unitare si de integrare (rapide, folosesc `dates_test`):
 ```bash
 npm run verify
@@ -262,7 +280,7 @@ npm run test:e2e
 ```
 - `npx playwright install chromium` se face **o singura data** (descarca ~115 MB, browserul de test).
 - `npm run test:e2e` construieste aplicatia (`npm run build`), o porneste pe portul **3100** (nu se ciocneste cu `npm run dev` de pe 3000) si ruleaza testele contra bazei `dates_test`. Nu atinge baza `dates`. Ai nevoie de `TEST_DATABASE_URL` in `.env.test.local`.
-- Testul de upload real de poze e sarit automat (apare `skipped`). Ca sa-l rulezi, adauga in `.env.test.local` o linie noua `E2E_BLOB_READ_WRITE_TOKEN=<acelasi token Blob>`. Atentie: scrie poze mici de test in Blob-ul real.
+- Testul de upload real de poze e sarit automat (apare `skipped`). Ca sa-l rulezi, adauga in `.env.test.local` o linie noua `E2E_BLOB_READ_WRITE_TOKEN=<acelasi token Blob>`. Atentie: scrie poze mici de test in store-ul Blob real (privat).
 
 ---
 
@@ -355,7 +373,10 @@ Apoi:
 | Login mereu "gresit" | username diferit de cel din env, parola gresita, sau blocat de rate limit | verifica `USER_.._NAME`; vezi mai jos |
 | "Prea multe incercari, incearca din nou peste 15 minute" | 5 incercari gresite de pe acelasi IP | asteapta 15 minute sau `USE dates; DELETE FROM login_attempts;` in TiDB SQL Editor |
 | Nu vine emailul | `EMAIL_EL` diferit de adresa contului Resend, sau Spam | Resend -> **Emails** arata fiecare trimitere si motivul erorii |
-| Poza nu se incarca | `BLOB_READ_WRITE_TOKEN` provizoriu / gresit | pune tokenul real (pasul 3.1) |
+| Poza nu se incarca | `BLOB_READ_WRITE_TOKEN` provizoriu / gresit, sau store-ul e Public | ruleaza `npm run check:blob`; pune tokenul real de la store-ul Private (pasul 3.1) |
+| `check:blob` arata `FAIL  2. Cerere anonima refuzata` | store-ul Blob e Public (nu se poate schimba dupa creare) | sterge store-ul si creeaza-l ca **Private**, pune noul token in `.env.local` si in Vercel (pasul 3.1), apoi Redeploy |
+| `check:blob` arata `Vercel Blob: This store does not exist` sau o eroare de autentificare | tokenul e gresit, vechi (store sters) sau apartine altui store | copiaza din nou tokenul de la store-ul curent (pasul 3.1) |
+| Poza apare ca imagine stricata dupa deploy | `BLOB_READ_WRITE_TOKEN` din Vercel apartine altui store (sau lipseste) | verifica variabila in Vercel (Settings -> Environment Variables), apoi Redeploy |
 | "Sunt acceptate doar poze JPEG, PNG sau WebP" | poza HEIC pe un browser desktop care nu o poate deschide | trimite-o de pe telefon sau converteste in JPG |
 | Nu se vad frunzele / fulgii | WebGL dezactivat (accelerare hardware oprita in browser) | Chrome -> Settings -> System -> "Use graphics acceleration" pornit; aplicatia merge si fara |
 | `.env.local.example` apare modificat in `git status` | ai scris valori reale in el | muta valorile in `.env.local`, apoi `git restore .env.local.example` (regula 0.3) |

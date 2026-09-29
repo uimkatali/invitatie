@@ -44,7 +44,7 @@ Istoricul ramane in git.
 | Validare | `zod` |
 | Auth | `bcryptjs` + `jose` (JWT HS256 in cookie) |
 | Email | Resend (sandbox) |
-| Fisiere | Vercel Blob |
+| Fisiere | Vercel Blob, store privat (`put` / `get` / `del` cu `access: 'private'`) |
 | 3D | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing` |
 | Fonturi | `next/font`: Fraunces (titluri), Inter (text) |
 | Teste | Vitest (unit + integrare), Playwright (E2E + securitate) |
@@ -73,7 +73,7 @@ USER_EA_PASSWORD_HASH=
 EMAIL_EL=
 EMAIL_EA=                # optional, nefolosit in v1 (Resend sandbox)
 RESEND_API_KEY=
-BLOB_READ_WRITE_TOKEN=   # generat automat de Vercel la conectarea Blob store
+BLOB_READ_WRITE_TOKEN=   # tokenul store-ului Blob PRIVAT (Vercel il adauga la conectarea store-ului; local se copiaza in .env.local)
 TEST_DATABASE_URL=       # optional, doar pentru testele de integrare si E2E (baza dates_test), in .env.test.local
 APP_URL=                 # optional, baza linkurilor din emailuri; altfel VERCEL_PROJECT_PRODUCTION_URL, altfel http://localhost:3000
 ```
@@ -125,8 +125,8 @@ Indexuri: `UNIQUE uq_invitation_author (invitation_id, author)`.
 |---|---|
 | id | char(36) PK |
 | memory_id | char(36) FK -> memories.id (ON DELETE CASCADE) |
-| blob_url | varchar(500) | URL-ul din Blob, doar pe server (stream si stergere), niciodata trimis clientului |
-| blob_pathname | varchar(500) | cheia in Blob (`photos/<memoryId>/<uuid>.<ext>`, plus sufix aleator adaugat de Blob) |
+| blob_url | varchar(500) | URL-ul intors de Blob la incarcare; doar informativ (pentru un blob privat nu se poate citi anonim), niciodata trimis clientului |
+| blob_pathname | varchar(500) | cheia in Blob (`photos/<memoryId>/<uuid>.<ext>`, plus sufix aleator adaugat de Blob); cu ea se citeste (`get`) si se sterge (`del`) blob-ul |
 | content_type | varchar(50) |
 | width, height | int null |
 | created_at | datetime |
@@ -188,8 +188,8 @@ FK-urile cu cascade nu sterg fisierele din Blob, dar singurele stergeri expuse i
 | `/invitatii/[id]` | detaliu, dupa rol si status (mai jos) | scroll-driven sau ambient |
 | `/idei` | lista, adaugare, stergere (proprie + nefolosita), "Fa din asta o invitatie" | ambient "amandoua" |
 | `/notificari` | lista cronologica (ultimele 100), "Marcheaza tot citit" | ambient "amandoua" |
-| `/api/blob-upload` | `POST` multipart: sesiune, acelasi origin, `Content-Length` obligatoriu (411), maxim 4 MB (413), tipul real verificat dupa magic bytes; incarca in Blob pe server si inregistreaza poza | - |
-| `/api/photos/[id]` | serveste poza prin stream din Blob, dupa verificarea sesiunii, cu CSP strict propriu | - |
+| `/api/blob-upload` | `POST` multipart: sesiune, acelasi origin, `Content-Length` obligatoriu (411), maxim 4 MB (413), tipul real verificat dupa magic bytes; incarca in Blob (privat) pe server si inregistreaza poza | - |
+| `/api/photos/[id]` | serveste poza prin stream din Blob privat (`get` autentificat), dupa verificarea sesiunii, cu CSP strict propriu | - |
 
 Header global: logo, badge notificari necitite, linkuri Calendar / Idei / Invitatie noua, logout.
 
@@ -277,9 +277,9 @@ Scroll nativ al paginii cu canvas `fixed` in spate (nu drei `ScrollControls`: ac
 | A09 | Logging and Alerting Failures | Loguri structurate (JSON pe stdout, vizibile in Vercel) pentru login esuat, rate limit atins, acces interzis, email esuat, eroare neasteptata. Erorile se logheaza prin `errorInfo`: numele erorii, `detail` doar pentru `EnvError` (nume de variabile), `dbCode` / `dbKind` pentru erori de baza de date; niciodata mesajele drizzle (cu parametri), parole, token-uri, hash-uri, URL-uri Blob sau continutul mesajelor. |
 | A10 | Mishandling of Exceptional Conditions | Fail closed: env lipsa -> eroare; sesiune invalida -> redirect login; clientul primeste doar mesaje generice, detaliile raman in log; 404 in loc de 403 pentru resurse inexistente sau interzise. |
 
-Pozele sunt servite doar prin server: URL-ul Blob nu ajunge niciodata la client. `/api/photos/[id]` verifica sesiunea, accepta doar URL-uri de pe hostul Vercel Blob (fara SSRF, fara redirecturi, cu timeout), citeste blob-ul pe server si il trimite cu `Cache-Control: private, max-age=300`, `Content-Type` din DB, `nosniff` si `Content-Security-Policy: default-src 'none'; sandbox`.
+Pozele stau intr-un store Vercel Blob **privat** (acces ales la crearea store-ului, imposibil de schimbat dupa) si sunt servite doar prin server: nici URL-ul, nici pathname-ul Blob nu ajung la client. `/api/photos/[id]` verifica sesiunea, citeste blob-ul pe server cu `get(pathname, { access: 'private', token })` din SDK (stream, cu timeout; nu se face `fetch` pe URL-uri din baza de date, deci nu exista SSRF) si il trimite cu `Cache-Control: private, max-age=300`, `Content-Type` din DB, `nosniff` si `Content-Security-Policy: default-src 'none'; sandbox`.
 
-**Risc acceptat:** blob-urile sunt stocate cu `access: 'public'` (URL cu sufix aleator). Cine obtine URL-ul brut al unei poze (baza de date, loguri, backup) o poate citi fara autentificare; de aceea URL-urile Blob se trateaza ca secrete si nu se logheaza. `@vercel/blob` 2.8 ofera si `access: 'private'` cu `get()` autentificat; trecerea la el e pasul urmator (vezi abaterea 9 din planul overview).
+Un URL de blob privat (`https://<store>.private.blob.vercel-storage.com/...`) nu se poate citi fara token; tokenul `BLOB_READ_WRITE_TOKEN` ramane doar pe server si nu se logheaza. `npm run check:blob` verifica un store real: incarcare privata, cerere anonima refuzata, citire autentificata, stergere (vezi abaterea 9 din planul overview).
 
 ## 11. Erori
 
@@ -308,7 +308,7 @@ Scris pentru cineva fara experienta, cu fiecare click si fiecare comanda:
 2. TiDB Cloud: cluster Starter in AWS Frankfurt (eu-central-1), baza `dates` (si `dates_test` optional), copierea connection string-ului
 3. Local: `.env.local` din `.env.local.example`, generarea `SESSION_SECRET` cu o comanda, `npm run hash-password` pentru fiecare user
 4. `npm install`, `npm run db:migrate`, `npm run dev`, primul login
-5. Vercel: import din GitHub, regiunea `fra1`, creare si conectare Blob store, copierea env vars
+5. Vercel: import din GitHub, regiunea `fra1`, creare si conectare Blob store PRIVAT, copierea env vars, `npm run check:blob`
 6. Deploy + checklist de verificare pe productie (login ca el, invitatie, login ca ea, raspuns, email primit, poza)
 7. Troubleshooting: erori frecvente cu mesajul exact si solutia
 8. README-ul se rescrie scurt, cu trimitere la `SETUP.md`
