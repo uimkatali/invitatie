@@ -1221,6 +1221,8 @@ git commit -m "feat: mount the 3D scene behind the app and login pages"
 - Create: `components/scene/InvitationExperience.tsx`
 - Modify: `app/(app)/invitatii/[id]/page.tsx` (rescris), `app/(app)/invitatii/[id]/ResponsePanel.tsx`, `app/(app)/invitatii/noua/InvitationForm.tsx`, `app/globals.css`
 
+> **Nota (fixuri UI dupa Faza 2):** `ResponsePanel.tsx`, `InvitationForm.tsx` si `page.tsx` contin deja: radio-uri necontrolate (`defaultChecked`, ca sa supravietuiasca reset-ului formularului din React 19), `maxDateTime`, valorile ecou-ate la eroare, `RefreshOnMount` (badge) si mesajul flash `?mesaj=`. Modificarile de mai jos se aplica peste acel cod; nu le inlocui cu variante controlate (`checked=`).
+
 - [ ] **Step 1: Scrie `components/scene/InvitationExperience.tsx`**
 
 ```tsx
@@ -1341,7 +1343,7 @@ Adauga importul:
 import { triggerBurst } from '@/lib/scene/store';
 ```
 
-Pe `<form ...>` adauga handler-ul `onSubmit` (rafala porneste imediat; pagina se re-randeaza dupa raspuns, iar store-ul pastreaza rafala in curs):
+Pe `<form ...>` adauga handler-ul `onSubmit` (rafala porneste imediat; pagina se re-randeaza dupa raspuns, iar store-ul pastreaza rafala in curs). `choice` ramane state-ul care urmareste selectia (radio-urile folosesc `defaultChecked={choice === option.value}` + `onChange`, nu `checked`):
 
 ```tsx
     <form
@@ -1361,7 +1363,7 @@ Adauga importul:
 import SceneController from '@/components/scene/SceneController';
 ```
 
-Imediat dupa `<form action={formAction} className="card form">` adauga:
+Imediat dupa `<form action={formAction} className="card form">` adauga (`theme` e state-ul existent; radio-urile raman cu `defaultChecked`):
 
 ```tsx
       <SceneController theme={theme} />
@@ -1372,17 +1374,19 @@ Imediat dupa `<form action={formAction} className="card form">` adauga:
 ```tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import RefreshOnMount from '@/components/RefreshOnMount';
 import SceneController from '@/components/scene/SceneController';
 import InvitationExperience from '@/components/scene/InvitationExperience';
 import { requireSession } from '@/lib/auth/require-session';
 import { displayNames } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { getInvitation } from '@/lib/invitations/queries';
-import { canPerform } from '@/lib/invitations/state-machine';
+import { MAX_FUTURE_MS, canPerform } from '@/lib/invitations/state-machine';
 import { listMemories } from '@/lib/memories/queries';
 import { canHaveMemories } from '@/lib/memories/service';
 import { markReadForInvitation } from '@/lib/notifications/queries';
 import { formatDateTimeRo, toLocalInputValue } from '@/lib/time';
+import { flashMessage } from './flash';
 import InvitationDetails from './InvitationDetails';
 import ResponsePanel from './ResponsePanel';
 import CreatorActions from './CreatorActions';
@@ -1391,18 +1395,24 @@ import { respondAction, acceptProposalAction, cancelInvitationAction } from './a
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ revezi?: string }>;
+  searchParams: Promise<{ revezi?: string; mesaj?: string | string[] }>;
 }
 
 export default async function InvitationPage({ params, searchParams }: PageProps) {
   const me = await requireSession();
-  const [{ id }, { revezi }] = await Promise.all([params, searchParams]);
+  const [{ id }, { revezi, mesaj }] = await Promise.all([params, searchParams]);
+  const flash = flashMessage(mesaj);
   const db = getDb();
   const invitation = await getInvitation(db, id);
   if (!invitation) notFound();
 
   const now = new Date();
-  await markReadForInvitation(db, me, invitation.id, now);
+  // Atentie: marcarea ca citite se face aici, la randarea GET a paginii. Un prefetch agresiv al
+  // link-urilor catre aceasta pagina (prefetch={true}) ar marca notificarile citite la simplul hover.
+  const markedRead = await markReadForInvitation(db, me, invitation.id, now);
+  // Layout-ul nu se re-randeaza la navigarea client: cerem un refresh ca badge-ul sa se actualizeze.
+  // Dupa refresh markedRead e 0 si componenta dispare; restul arborelui ramane montat.
+  const refresh = markedRead > 0 ? <RefreshOnMount /> : null;
   const names = displayNames();
   const isRecipient = invitation.toUser === me;
   const canRespond = canPerform(invitation, me, 'accept', now);
@@ -1410,29 +1420,36 @@ export default async function InvitationPage({ params, searchParams }: PageProps
 
   if (canRespond || replay) {
     return (
-      <InvitationExperience
-        theme={invitation.theme}
-        invitation={{
-          title: invitation.title,
-          message: invitation.message,
-          location: invitation.location,
-          startsAtISO: invitation.startsAt.toISOString(),
-          startsAtLabel: formatDateTimeRo(invitation.startsAt),
-          dressCode: invitation.dressCode,
-          fromName: names[invitation.fromUser],
-        }}
-      >
-        {canRespond ? (
-          <ResponsePanel action={respondAction.bind(null, invitation.id)} minDateTime={toLocalInputValue(now)} />
-        ) : (
-          <div className="card stack">
-            <p>Ai raspuns deja la invitatia asta.</p>
-            <Link href={`/invitatii/${invitation.id}`} className="btn btn-primary">
-              Inapoi la rezumat
-            </Link>
-          </div>
-        )}
-      </InvitationExperience>
+      <>
+        {refresh}
+        <InvitationExperience
+          theme={invitation.theme}
+          invitation={{
+            title: invitation.title,
+            message: invitation.message,
+            location: invitation.location,
+            startsAtISO: invitation.startsAt.toISOString(),
+            startsAtLabel: formatDateTimeRo(invitation.startsAt),
+            dressCode: invitation.dressCode,
+            fromName: names[invitation.fromUser],
+          }}
+        >
+          {canRespond ? (
+            <ResponsePanel
+              action={respondAction.bind(null, invitation.id)}
+              minDateTime={toLocalInputValue(now)}
+              maxDateTime={toLocalInputValue(new Date(now.getTime() + MAX_FUTURE_MS))}
+            />
+          ) : (
+            <div className="card stack">
+              <p>Ai raspuns deja la invitatia asta.</p>
+              <Link href={`/invitatii/${invitation.id}`} className="btn btn-primary">
+                Inapoi la rezumat
+              </Link>
+            </div>
+          )}
+        </InvitationExperience>
+      </>
     );
   }
 
@@ -1440,7 +1457,13 @@ export default async function InvitationPage({ params, searchParams }: PageProps
 
   return (
     <div className="stack">
+      {refresh}
       <SceneController theme={invitation.theme} />
+      {flash && (
+        <p className="form-success" role="status">
+          {flash}
+        </p>
+      )}
       <InvitationDetails
         invitation={invitation}
         me={me}

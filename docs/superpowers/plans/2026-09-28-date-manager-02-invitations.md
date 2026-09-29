@@ -10,6 +10,8 @@
 
 **Prerequisite:** Faza 1 terminata. Spec sectiunile 6, 7, 8, 11. Abaterile: `2026-09-28-date-manager-00-overview.md`.
 
+> **Nota (fixuri UI dupa review):** codul din Task 8 (layout), 10 (`InvitationForm`, `page`) si 11 (`actions`, `ResponsePanel`, `page`, fisierele ajutatoare din Step 0) include fixurile aplicate in repo dupa review: radio-uri necontrolate (`defaultChecked`), badge reimprospatat (`RefreshOnMount` + `markReadForInvitation` intoarce numarul de randuri), countdown fara diferente de hidratare, layout tolerant la esecul numararii notificarilor, mesaje de succes prin redirect (`?mesaj=`), valori pastrate la eroare si limite `max` pe date. Pentru orice alt fisier al acestei faze, **repo-ul (`git log`) e sursa de adevar** daca difera de blocurile de cod de mai jos.
+
 ---
 
 ## File map (Faza 2)
@@ -945,7 +947,7 @@ export async function insertNotification(db: DbOrTx, input: NewNotification): Pr
 
 ```ts
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import type { Db } from '../db/client';
+import { affectedRows, type Db } from '../db/client';
 import { invitations, notifications } from '../db/schema';
 import type { InvitationStatus, NotificationType, UserId } from '../domain';
 
@@ -992,13 +994,15 @@ export async function markAllRead(db: Db, user: UserId, now: Date): Promise<void
     .where(and(eq(notifications.recipient, user), isNull(notifications.readAt)));
 }
 
-export async function markReadForInvitation(db: Db, user: UserId, invitationId: string, now: Date): Promise<void> {
-  await db
+/** Intoarce cate notificari au fost marcate citite (0 = nimic nou de citit). */
+export async function markReadForInvitation(db: Db, user: UserId, invitationId: string, now: Date): Promise<number> {
+  const result = await db
     .update(notifications)
     .set({ readAt: now })
     .where(
       and(eq(notifications.recipient, user), eq(notifications.invitationId, invitationId), isNull(notifications.readAt)),
     );
+  return affectedRows(result);
 }
 ```
 
@@ -1191,8 +1195,10 @@ describe.skipIf(!hasTestDb)('invitation service', () => {
 
   it('marks notifications of an invitation as read', async () => {
     const id = await created();
-    await markReadForInvitation(db, 'ea', id, NOW);
+    expect(await markReadForInvitation(db, 'ea', id, NOW)).toBe(1);
     expect(await countUnread(db, 'ea')).toBe(0);
+    // A doua citire nu mai gaseste nimic necitit: pagina nu trebuie sa ceara un refresh.
+    expect(await markReadForInvitation(db, 'ea', id, NOW)).toBe(0);
     const rows = await db.select().from(notifications).where(eq(notifications.invitationId, id));
     expect(rows[0].readAt).not.toBeNull();
   });
@@ -1514,10 +1520,17 @@ import { requireSession } from '@/lib/auth/require-session';
 import { displayName } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { countUnread } from '@/lib/notifications/queries';
+import { log, errorName } from '@/lib/log';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await requireSession();
-  const unread = await countUnread(getDb(), me);
+  // Un esec al bazei de date nu trebuie sa strice paginile care nu au nevoie de date: afisam fara badge.
+  let unread = 0;
+  try {
+    unread = await countUnread(getDb(), me);
+  } catch (err) {
+    log('error', 'unread_count_failed', { reason: errorName(err) });
+  }
   return (
     <>
       <SkyBackground theme="amandoua" />
@@ -1747,13 +1760,14 @@ export interface InvitationDefaults {
 interface InvitationFormProps {
   defaults: InvitationDefaults;
   minDateTime: string;
+  maxDateTime: string;
 }
 
 function isTheme(value: string | undefined): value is ThemeId {
   return THEMES.includes(value as ThemeId);
 }
 
-export default function InvitationForm({ defaults, minDateTime }: InvitationFormProps) {
+export default function InvitationForm({ defaults, minDateTime, maxDateTime }: InvitationFormProps) {
   const [state, formAction] = useActionState(createInvitationAction, null);
   const failed = state && !state.ok ? state : null;
   const value = (key: string, fallback = '') => failed?.values?.[key] ?? fallback;
@@ -1806,6 +1820,7 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
           type="datetime-local"
           required
           min={minDateTime}
+          max={maxDateTime}
           defaultValue={value('startsAt')}
           aria-invalid={Boolean(error('startsAt'))}
         />
@@ -1815,17 +1830,21 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
         <input id="dressCode" name="dressCode" maxLength={LIMITS.dressCodeMax} defaultValue={value('dressCode')} />
       </Field>
 
-      <fieldset className="field">
+      <fieldset className="field" aria-describedby={error('theme') ? 'theme-error' : undefined}>
         <legend>Tema</legend>
         <div className="choice-grid">
           {THEMES.map((t) => (
             <label key={t} className="choice">
-              <input type="radio" name="theme" value={t} checked={theme === t} onChange={() => setTheme(t)} />
+              <input type="radio" name="theme" value={t} defaultChecked={theme === t} onChange={() => setTheme(t)} />
               <span>{THEME_LABELS[t]}</span>
             </label>
           ))}
         </div>
-        {error('theme') && <p className="field-error">{error('theme')}</p>}
+        {error('theme') && (
+          <p className="field-error" id="theme-error">
+            {error('theme')}
+          </p>
+        )}
       </fieldset>
 
       {failed && (
@@ -1843,16 +1862,22 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
 
 ```tsx
 import { requireSession } from '@/lib/auth/require-session';
+import { MAX_FUTURE_MS } from '@/lib/invitations/state-machine';
 import { toLocalInputValue } from '@/lib/time';
 import InvitationForm, { type InvitationDefaults } from './InvitationForm';
 
 export default async function NewInvitationPage() {
   await requireSession();
   const defaults: InvitationDefaults = { title: '', message: '', ideaId: '' };
+  const now = new Date();
   return (
     <div className="stack">
       <h1>Invitatie noua</h1>
-      <InvitationForm defaults={defaults} minDateTime={toLocalInputValue(new Date())} />
+      <InvitationForm
+        defaults={defaults}
+        minDateTime={toLocalInputValue(now)}
+        maxDateTime={toLocalInputValue(new Date(now.getTime() + MAX_FUTURE_MS))}
+      />
     </div>
   );
 }
@@ -1875,7 +1900,279 @@ git commit -m "feat: add new invitation page"
 ### Task 11: Pagina invitatiei si actiunile
 
 **Files:**
-- Create: `app/(app)/invitatii/[id]/actions.ts`, `InvitationDetails.tsx`, `ResponsePanel.tsx`, `CreatorActions.tsx`, `page.tsx` (toate in `app/(app)/invitatii/[id]/`)
+- Create: `app/(app)/invitatii/[id]/actions.ts`, `flash.ts`, `flash.test.ts`, `response-values.ts`, `response-values.test.ts`, `InvitationDetails.tsx`, `ResponsePanel.tsx`, `CreatorActions.tsx`, `page.tsx` (toate in `app/(app)/invitatii/[id]/`), `components/RefreshOnMount.tsx`
+- Modify: `components/Countdown.tsx` (hidratare stabila)
+
+- [ ] **Step 0: Fisiere ajutatoare (mesaj flash, valori ecou-ate, refresh badge, countdown stabil)**
+
+`app/(app)/invitatii/[id]/flash.ts` (mesajul de succes vine prin `?mesaj=<cheie>` dupa redirect; parametrul nu se reflecta niciodata direct):
+
+```ts
+/** Mesajele afisate dupa o actiune reusita, transmise prin `?mesaj=<cheie>` (redirect). */
+export const FLASH_MESSAGES = {
+  raspuns: 'Raspuns trimis.',
+  'ora-acceptata': 'Ora noua a fost acceptata.',
+  anulata: 'Invitatia a fost anulata.',
+} as const;
+
+export type FlashKey = keyof typeof FLASH_MESSAGES;
+
+/** Cauta in harta fixa; parametrul din URL nu se reflecta niciodata direct in pagina. */
+export function flashMessage(param: string | string[] | undefined): string | null {
+  if (typeof param !== 'string' || !Object.hasOwn(FLASH_MESSAGES, param)) return null;
+  return FLASH_MESSAGES[param as FlashKey];
+}
+```
+
+`app/(app)/invitatii/[id]/flash.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { FLASH_MESSAGES, flashMessage } from './flash';
+
+describe('flashMessage', () => {
+  it('maps each known key to its fixed message', () => {
+    for (const [key, message] of Object.entries(FLASH_MESSAGES)) {
+      expect(flashMessage(key)).toBe(message);
+    }
+  });
+
+  it('returns null for unknown or missing keys', () => {
+    expect(flashMessage('nu-exista')).toBeNull();
+    expect(flashMessage('')).toBeNull();
+    expect(flashMessage(undefined)).toBeNull();
+  });
+
+  it('never reflects the raw param or inherited object properties', () => {
+    expect(flashMessage('<script>alert(1)</script>')).toBeNull();
+    expect(flashMessage('constructor')).toBeNull();
+    expect(flashMessage('__proto__')).toBeNull();
+    expect(flashMessage('toString')).toBeNull();
+  });
+
+  it('ignores repeated params (array form)', () => {
+    expect(flashMessage(['raspuns', 'anulata'])).toBeNull();
+  });
+});
+```
+
+`app/(app)/invitatii/[id]/response-values.ts` (valorile trimise, repetate in formular dupa o eroare):
+
+```ts
+import { LIMITS } from '@/lib/domain';
+
+export type ResponseValues = Record<'action' | 'proposedAt' | 'note', string>;
+
+/** Valorile trimise, repetate in formular dupa o eroare (fara sa depaseasca limita notei). */
+export function echoResponseValues(values: ResponseValues): ResponseValues {
+  return { ...values, note: values.note.slice(0, LIMITS.responseNoteMax) };
+}
+```
+
+`app/(app)/invitatii/[id]/response-values.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { LIMITS } from '@/lib/domain';
+import { echoResponseValues } from './response-values';
+
+describe('echoResponseValues', () => {
+  it('keeps the submitted values', () => {
+    const values = { action: 'reschedule', proposedAt: '2026-10-10T18:00', note: 'Mai tarziu?' };
+    expect(echoResponseValues(values)).toEqual(values);
+  });
+
+  it('caps the note at the response note limit', () => {
+    const echoed = echoResponseValues({ action: 'accept', proposedAt: '', note: 'x'.repeat(LIMITS.responseNoteMax + 50) });
+    expect(echoed.note).toHaveLength(LIMITS.responseNoteMax);
+  });
+});
+```
+
+`components/RefreshOnMount.tsx` (badge-ul din layout nu se actualizeaza singur la navigarea client dupa ce pagina marcheaza notificarile citite):
+
+```tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+/**
+ * Cere o singura data un refresh al arborelui de rute la montare. Folosit cand pagina a schimbat
+ * date afisate de layout (ex. badge-ul de notificari necitite), pe care navigarea client nu le
+ * re-randeaza singura.
+ */
+export default function RefreshOnMount() {
+  const router = useRouter();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    router.refresh();
+  }, [router]);
+  return null;
+}
+```
+
+`components/Countdown.tsx` (rescris: ora curenta nu se citeste la randarea pe server, ca sa nu apara diferente la hidratare; pana la montare apar `--`):
+
+```tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { getTimeRemaining, pad2, TimeRemaining } from '../lib/countdown';
+
+interface CountdownProps {
+  targetISO: string;
+  label: string;
+  completeLabel: string;
+}
+
+export default function Countdown({ targetISO, label, completeLabel }: CountdownProps) {
+  // Ora curenta nu exista la fel pe server si pe client: pana la montare afisam un placeholder
+  // stabil (`--`), ca sa nu apara o diferenta la hidratare.
+  const [remaining, setRemaining] = useState<TimeRemaining | null>(null);
+
+  useEffect(() => {
+    const tick = () => setRemaining(getTimeRemaining(targetISO, new Date()));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [targetISO]);
+
+  if (remaining?.isComplete) {
+    return <p className="countdown-complete">{completeLabel}</p>;
+  }
+
+  const unit = (value: number | undefined, suffix: string) => `${value === undefined ? '--' : pad2(value)}${suffix}`;
+
+  return (
+    <div className="countdown">
+      <p className="countdown-label">{label}</p>
+      <div className="countdown-units">
+        <span>{unit(remaining?.days, 'z')}</span>
+        <span>{unit(remaining?.hours, 'h')}</span>
+        <span>{unit(remaining?.minutes, 'm')}</span>
+        <span>{unit(remaining?.seconds, 's')}</span>
+      </div>
+    </div>
+  );
+}
+```
+
+`components/Countdown.test.tsx`:
+
+```tsx
+import { describe, it, expect } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import Countdown from './Countdown';
+
+describe('Countdown', () => {
+  it('renders a stable placeholder before mount (no server/client clock mismatch)', () => {
+    const html = renderToStaticMarkup(
+      <Countdown targetISO="2099-01-01T00:00:00.000Z" label="Mai sunt" completeLabel="E acum!" />,
+    );
+    expect(html).toContain('Mai sunt');
+    expect(html).toContain('--z');
+    expect(html).toContain('--h');
+    expect(html).toContain('--m');
+    expect(html).toContain('--s');
+    expect(html).not.toContain('E acum!');
+  });
+
+  it('renders identical markup for a past and a future target before mount', () => {
+    const render = (targetISO: string) =>
+      renderToStaticMarkup(<Countdown targetISO={targetISO} label="Mai sunt" completeLabel="E acum!" />);
+    expect(render('2000-01-01T00:00:00.000Z')).toBe(render('2099-01-01T00:00:00.000Z'));
+  });
+});
+```
+
+Note: radio-urile din `ResponsePanel.tsx` si `InvitationForm.tsx` folosesc `defaultChecked` (nu `checked`): React 19 reseteaza formularul dupa fiecare `<form action>`, iar un radio controlat ar reveni atunci la valoarea initiala din DOM, desincronizat de state. `ResponsePanel.test.tsx` si `InvitationForm.test.tsx` (langa componente) verifica asta si limitele `min`/`max` ale datelor:
+
+`app/(app)/invitatii/[id]/ResponsePanel.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import ResponsePanel from './ResponsePanel';
+
+vi.mock('./actions', () => ({}));
+
+const noop = async () => null;
+
+describe('ResponsePanel', () => {
+  it('starts with only the accept radio checked', () => {
+    const html = renderToStaticMarkup(<ResponsePanel action={noop} minDateTime="2026-01-01T10:00" maxDateTime="2028-01-01T10:00" />);
+    const radios = html.match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
+    expect(radios).toHaveLength(3);
+    const checked = radios.filter((r) => /\schecked(=|\s|>)/.test(r));
+    expect(checked).toHaveLength(1);
+    expect(checked[0]).toContain('value="accept"');
+  });
+
+  it('limits the proposed date with min and max once "reschedule" is chosen', () => {
+    // Campul apare doar dupa alegerea "reschedule" (state client, imposibil de declansat la randare
+    // statica), deci verificam legarea limitelor direct in sursa.
+    const source = readFileSync(join(process.cwd(), 'app/(app)/invitatii/[id]/ResponsePanel.tsx'), 'utf8');
+    expect(source).toMatch(/min=\{minDateTime\}/);
+    expect(source).toMatch(/max=\{maxDateTime\}/);
+  });
+
+  // React 19 reset-eaza formularul dupa fiecare <form action>. Un radio controlat (`checked=`)
+  // revine atunci la valoarea initiala din DOM, dar state-ul ramane, deci se trimite alt raspuns.
+  it('uses uncontrolled radios (defaultChecked) so a form reset cannot desync the choice', () => {
+    const files = ['app/(app)/invitatii/[id]/ResponsePanel.tsx', 'app/(app)/invitatii/noua/InvitationForm.tsx'];
+    for (const file of files) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(source, file).not.toMatch(/\schecked=\{/);
+      expect(source, file).toMatch(/defaultChecked=\{/);
+    }
+  });
+});
+```
+
+`app/(app)/invitatii/noua/InvitationForm.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import InvitationForm from './InvitationForm';
+
+vi.mock('./actions', () => ({ createInvitationAction: async () => null }));
+
+const render = () =>
+  renderToStaticMarkup(
+    <InvitationForm
+      defaults={{ title: '', message: '', ideaId: '' }}
+      minDateTime="2026-09-28T10:00"
+      maxDateTime="2028-09-27T10:00"
+    />,
+  );
+
+describe('InvitationForm', () => {
+  it('limits the start date with min and max', () => {
+    const html = render();
+    expect(html).toContain('min="2026-09-28T10:00"');
+    expect(html).toContain('max="2028-09-27T10:00"');
+  });
+
+  it('starts with only the "amandoua" theme checked', () => {
+    const radios = render().match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
+    expect(radios).toHaveLength(3);
+    const checked = radios.filter((r) => /\schecked(=|\s|>)/.test(r));
+    expect(checked).toHaveLength(1);
+    expect(checked[0]).toContain('value="amandoua"');
+  });
+
+  it('has no theme error wiring while the form is valid', () => {
+    const html = render();
+    expect(html).not.toContain('theme-error');
+  });
+});
+```
 
 - [ ] **Step 1: Scrie `actions.ts`**
 
@@ -1883,6 +2180,7 @@ git commit -m "feat: add new invitation page"
 'use server';
 
 import { after } from 'next/server';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth/require-session';
 import { getDb } from '@/lib/db/client';
@@ -1894,49 +2192,59 @@ import { respondSchema } from '@/lib/validation';
 import { pickStrings, toFieldErrors } from '@/lib/form';
 import { log, errorName } from '@/lib/log';
 import { GENERIC_ERROR, toActionState, type ActionState } from '@/lib/result';
+import type { FlashKey } from './flash';
+import { echoResponseValues, type ResponseValues } from './response-values';
+
+const invitationPath = (id: string) => `/invitatii/${id}`;
 
 async function perform(
   invitationId: string,
   actor: UserId,
   action: InvitationAction,
   note: string | null,
-  successMessage: string,
+  flash: FlashKey,
+  values?: ResponseValues,
 ): Promise<ActionState> {
+  let result: Awaited<ReturnType<typeof applyInvitationAction>>;
   try {
-    const result = await applyInvitationAction(getDb(), actor, invitationId, action, new Date(), note);
-    if (!result.ok) {
-      if (result.code === 'forbidden') log('warn', 'forbidden_action', { actor, action: action.type });
-      return toActionState(result);
-    }
-    const { event } = result.value;
-    after(() => sendNotificationEmail(event));
-    revalidatePath(`/invitatii/${invitationId}`);
-    revalidatePath('/');
-    return { ok: true, message: successMessage };
+    result = await applyInvitationAction(getDb(), actor, invitationId, action, new Date(), note);
   } catch (err) {
     log('error', 'invitation_action_failed', { action: action.type, reason: errorName(err) });
-    return { ok: false, error: GENERIC_ERROR };
+    return { ok: false, error: GENERIC_ERROR, ...(values && { values }) };
   }
+  if (!result.ok) {
+    if (result.code === 'forbidden') log('warn', 'forbidden_action', { actor, action: action.type });
+    const state = toActionState(result);
+    return values && state && !state.ok ? { ...state, values } : state;
+  }
+  const { event } = result.value;
+  after(() => sendNotificationEmail(event));
+  revalidatePath(invitationPath(invitationId));
+  revalidatePath('/');
+  // Formularul dispare dupa revalidare, deci mesajul de succes se afiseaza prin redirect (flash).
+  // redirect() arunca intern: trebuie sa ramana in afara oricarui try/catch.
+  redirect(`${invitationPath(invitationId)}?mesaj=${flash}`);
 }
 
 export async function respondAction(invitationId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireSession();
-  const parsed = respondSchema.safeParse(pickStrings(formData, ['action', 'proposedAt', 'note']));
-  if (!parsed.success) return { ok: false, error: 'Verifica raspunsul.', fields: toFieldErrors(parsed.error) };
+  const values = echoResponseValues(pickStrings(formData, ['action', 'proposedAt', 'note']));
+  const parsed = respondSchema.safeParse(values);
+  if (!parsed.success) return { ok: false, error: 'Verifica raspunsul.', fields: toFieldErrors(parsed.error), values };
   const input = parsed.data;
   const action: InvitationAction =
     input.action === 'reschedule' ? { type: 'reschedule', proposedAt: input.proposedAt } : { type: input.action };
-  return perform(invitationId, actor, action, input.note, 'Raspuns trimis.');
+  return perform(invitationId, actor, action, input.note, 'raspuns', values);
 }
 
 export async function acceptProposalAction(invitationId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const actor = await requireSession();
-  return perform(invitationId, actor, { type: 'acceptProposal' }, null, 'Ora noua a fost acceptata.');
+  return perform(invitationId, actor, { type: 'acceptProposal' }, null, 'ora-acceptata');
 }
 
 export async function cancelInvitationAction(invitationId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const actor = await requireSession();
-  return perform(invitationId, actor, { type: 'cancel' }, null, 'Invitatia a fost anulata.');
+  return perform(invitationId, actor, { type: 'cancel' }, null, 'anulata');
 }
 ```
 
@@ -2024,15 +2332,21 @@ const OPTIONS: { value: Choice; label: string }[] = [
   { value: 'reschedule', label: 'Propun alta ora' },
 ];
 
+function isChoice(value: string | undefined): value is Choice {
+  return OPTIONS.some((option) => option.value === value);
+}
+
 interface ResponsePanelProps {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   minDateTime: string;
+  maxDateTime: string;
 }
 
-export default function ResponsePanel({ action, minDateTime }: ResponsePanelProps) {
+export default function ResponsePanel({ action, minDateTime, maxDateTime }: ResponsePanelProps) {
   const [state, formAction] = useActionState(action, null);
-  const [choice, setChoice] = useState<Choice>('accept');
   const failed = state && !state.ok ? state : null;
+  const submittedChoice = failed?.values?.action;
+  const [choice, setChoice] = useState<Choice>(isChoice(submittedChoice) ? submittedChoice : 'accept');
 
   return (
     <form action={formAction} className="card form response-panel">
@@ -2046,7 +2360,7 @@ export default function ResponsePanel({ action, minDateTime }: ResponsePanelProp
                 type="radio"
                 name="action"
                 value={option.value}
-                checked={choice === option.value}
+                defaultChecked={choice === option.value}
                 onChange={() => setChoice(option.value)}
               />
               <span>{option.label}</span>
@@ -2057,22 +2371,25 @@ export default function ResponsePanel({ action, minDateTime }: ResponsePanelProp
 
       {choice === 'reschedule' && (
         <Field label="Ce ora ti-ar conveni?" htmlFor="proposedAt" error={failed?.fields?.proposedAt} hint="Ora Romaniei">
-          <input id="proposedAt" name="proposedAt" type="datetime-local" required min={minDateTime} />
+          <input
+            id="proposedAt"
+            name="proposedAt"
+            type="datetime-local"
+            required
+            min={minDateTime}
+            max={maxDateTime}
+            defaultValue={failed?.values?.proposedAt ?? ''}
+          />
         </Field>
       )}
 
       <Field label="Un mesaj (optional)" htmlFor="note" error={failed?.fields?.note}>
-        <textarea id="note" name="note" maxLength={LIMITS.responseNoteMax} />
+        <textarea id="note" name="note" maxLength={LIMITS.responseNoteMax} defaultValue={failed?.values?.note ?? ''} />
       </Field>
 
       {failed && (
         <p className="form-error" role="alert">
           {failed.error}
-        </p>
-      )}
-      {state?.ok && (
-        <p className="form-success" role="status">
-          {state.message}
         </p>
       )}
       <SubmitButton label="Trimite raspunsul" />
@@ -2116,32 +2433,49 @@ export default function CreatorActions({ acceptProposal, cancel }: CreatorAction
 
 ```tsx
 import { notFound } from 'next/navigation';
+import RefreshOnMount from '@/components/RefreshOnMount';
 import { requireSession } from '@/lib/auth/require-session';
 import { displayNames } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { getInvitation } from '@/lib/invitations/queries';
-import { canPerform } from '@/lib/invitations/state-machine';
+import { MAX_FUTURE_MS, canPerform } from '@/lib/invitations/state-machine';
 import { markReadForInvitation } from '@/lib/notifications/queries';
 import { toLocalInputValue } from '@/lib/time';
+import { flashMessage } from './flash';
 import InvitationDetails from './InvitationDetails';
 import ResponsePanel from './ResponsePanel';
 import CreatorActions from './CreatorActions';
 import { respondAction, acceptProposalAction, cancelInvitationAction } from './actions';
 
-export default async function InvitationPage({ params }: { params: Promise<{ id: string }> }) {
+interface InvitationPageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mesaj?: string | string[] }>;
+}
+
+export default async function InvitationPage({ params, searchParams }: InvitationPageProps) {
   const me = await requireSession();
   const { id } = await params;
+  const flash = flashMessage((await searchParams).mesaj);
   const db = getDb();
   const invitation = await getInvitation(db, id);
   if (!invitation) notFound();
 
   const now = new Date();
-  await markReadForInvitation(db, me, invitation.id, now);
+  // Atentie: marcarea ca citite se face aici, la randarea GET a paginii. Un prefetch agresiv al
+  // link-urilor catre aceasta pagina (prefetch={true}) ar marca notificarile citite la simplul hover.
+  const markedRead = await markReadForInvitation(db, me, invitation.id, now);
   const names = displayNames();
   const canRespond = canPerform(invitation, me, 'accept', now);
 
   return (
     <div className="stack">
+      {/* Layout-ul nu se re-randeaza la navigarea client: cerem un refresh ca badge-ul sa se actualizeze. */}
+      {markedRead > 0 && <RefreshOnMount />}
+      {flash && (
+        <p className="form-success" role="status">
+          {flash}
+        </p>
+      )}
       <InvitationDetails
         invitation={invitation}
         me={me}
@@ -2149,7 +2483,11 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
         isFuture={invitation.startsAt.getTime() > now.getTime()}
       />
       {canRespond && (
-        <ResponsePanel action={respondAction.bind(null, invitation.id)} minDateTime={toLocalInputValue(now)} />
+        <ResponsePanel
+          action={respondAction.bind(null, invitation.id)}
+          minDateTime={toLocalInputValue(now)}
+          maxDateTime={toLocalInputValue(new Date(now.getTime() + MAX_FUTURE_MS))}
+        />
       )}
       <CreatorActions
         acceptProposal={
@@ -2170,7 +2508,7 @@ Expected: fara erori.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add "app/(app)/invitatii/[id]"
+git add "app/(app)/invitatii/[id]" components/RefreshOnMount.tsx components/Countdown.tsx components/Countdown.test.tsx lib/notifications/queries.ts
 git commit -m "feat: add invitation detail page with response and creator actions"
 ```
 
