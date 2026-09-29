@@ -5,10 +5,17 @@ import { requireSession } from '@/lib/auth/require-session';
 import { displayName } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { countUnread } from '@/lib/notifications/queries';
+import { log, errorName } from '@/lib/log';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = await requireSession();
-  const unread = await countUnread(getDb(), me);
+  // Un esec al bazei de date nu trebuie sa strice paginile care nu au nevoie de date: afisam fara badge.
+  let unread = 0;
+  try {
+    unread = await countUnread(getDb(), me);
+  } catch (err) {
+    log('error', 'unread_count_failed', { reason: errorName(err) });
+  }
   return (
     <>
       <SkyBackground theme="amandoua" />

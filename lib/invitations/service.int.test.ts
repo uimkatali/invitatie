@@ -126,8 +126,10 @@ describe.skipIf(!hasTestDb)('invitation service', () => {
 
   it('marks notifications of an invitation as read', async () => {
     const id = await created();
-    await markReadForInvitation(db, 'ea', id, NOW);
+    expect(await markReadForInvitation(db, 'ea', id, NOW)).toBe(1);
     expect(await countUnread(db, 'ea')).toBe(0);
+    // A doua citire nu mai gaseste nimic necitit: pagina nu trebuie sa ceara un refresh.
+    expect(await markReadForInvitation(db, 'ea', id, NOW)).toBe(0);
     const rows = await db.select().from(notifications).where(eq(notifications.invitationId, id));
     expect(rows[0].readAt).not.toBeNull();
   });

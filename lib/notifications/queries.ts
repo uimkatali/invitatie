@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import type { Db } from '../db/client';
+import { affectedRows, type Db } from '../db/client';
 import { invitations, notifications } from '../db/schema';
 import type { InvitationStatus, NotificationType, UserId } from '../domain';
 
@@ -48,11 +48,13 @@ export async function markAllRead(db: Db, user: UserId, now: Date): Promise<void
     .where(and(eq(notifications.recipient, user), isNull(notifications.readAt)));
 }
 
-export async function markReadForInvitation(db: Db, user: UserId, invitationId: string, now: Date): Promise<void> {
-  await db
+/** Intoarce cate notificari au fost marcate citite (0 = nimic nou de citit). */
+export async function markReadForInvitation(db: Db, user: UserId, invitationId: string, now: Date): Promise<number> {
+  const result = await db
     .update(notifications)
     .set({ readAt: now })
     .where(
       and(eq(notifications.recipient, user), eq(notifications.invitationId, invitationId), isNull(notifications.readAt)),
     );
+  return affectedRows(result);
 }

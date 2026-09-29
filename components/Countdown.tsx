@@ -10,29 +10,31 @@ interface CountdownProps {
 }
 
 export default function Countdown({ targetISO, label, completeLabel }: CountdownProps) {
-  const [remaining, setRemaining] = useState<TimeRemaining>(() =>
-    getTimeRemaining(targetISO, new Date())
-  );
+  // Ora curenta nu exista la fel pe server si pe client: pana la montare afisam un placeholder
+  // stabil (`--`), ca sa nu apara o diferenta la hidratare.
+  const [remaining, setRemaining] = useState<TimeRemaining | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRemaining(getTimeRemaining(targetISO, new Date()));
-    }, 1000);
+    const tick = () => setRemaining(getTimeRemaining(targetISO, new Date()));
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [targetISO]);
 
-  if (remaining.isComplete) {
+  if (remaining?.isComplete) {
     return <p className="countdown-complete">{completeLabel}</p>;
   }
+
+  const unit = (value: number | undefined, suffix: string) => `${value === undefined ? '--' : pad2(value)}${suffix}`;
 
   return (
     <div className="countdown">
       <p className="countdown-label">{label}</p>
       <div className="countdown-units">
-        <span>{pad2(remaining.days)}z</span>
-        <span>{pad2(remaining.hours)}h</span>
-        <span>{pad2(remaining.minutes)}m</span>
-        <span>{pad2(remaining.seconds)}s</span>
+        <span>{unit(remaining?.days, 'z')}</span>
+        <span>{unit(remaining?.hours, 'h')}</span>
+        <span>{unit(remaining?.minutes, 'm')}</span>
+        <span>{unit(remaining?.seconds, 's')}</span>
       </div>
     </div>
   );

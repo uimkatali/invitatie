@@ -60,11 +60,6 @@ export default function ResponsePanel({ action, minDateTime }: ResponsePanelProp
           {failed.error}
         </p>
       )}
-      {state?.ok && (
-        <p className="form-success" role="status">
-          {state.message}
-        </p>
-      )}
       <SubmitButton label="Trimite raspunsul" />
     </form>
   );
