@@ -5,6 +5,10 @@ import { log } from './lib/log';
 
 const PUBLIC_PATHS = new Set(['/login']);
 const MIN_SECRET_LENGTH = 32;
+// Raspunsurile cu poze sunt doar bytes: CSP-ul strict inlocuieste CSP-ul paginii, fiindca Next aplica
+// intai header-ele din proxy si ignora apoi header-ul setat de route handler.
+const PHOTO_PATH_PREFIX = '/api/photos/';
+const PHOTO_CSP = "default-src 'none'; sandbox";
 
 // Fail closed daca SESSION_SECRET lipseste sau e prea scurt, dar loga o singura data per proces
 // (proxy ruleaza pe fiecare request, nu vrem sa inundam log-urile).
@@ -26,8 +30,9 @@ function withCsp(response: NextResponse, csp: string): NextResponse {
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = btoa(crypto.randomUUID());
-  const csp = buildCsp(nonce, process.env.NODE_ENV === 'development');
   const { pathname } = request.nextUrl;
+  const isPhoto = pathname.startsWith(PHOTO_PATH_PREFIX);
+  const csp = isPhoto ? PHOTO_CSP : buildCsp(nonce, process.env.NODE_ENV === 'development');
 
   const user = await verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret());
   const isPublic = PUBLIC_PATHS.has(pathname);
@@ -38,8 +43,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   // Next citeste nonce-ul din header-ul CSP al request-ului si il pune pe scripturile lui.
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('Content-Security-Policy', csp);
+  if (!isPhoto) {
+    requestHeaders.set('x-nonce', nonce);
+    requestHeaders.set('Content-Security-Policy', csp);
+  }
 
   if (isAction) {
     return withCsp(NextResponse.next({ request: { headers: requestHeaders } }), csp);

@@ -4,6 +4,7 @@ import { proxy } from './proxy';
 import { signSession, SESSION_COOKIE } from './lib/auth/session';
 
 const SECRET = 'p'.repeat(32);
+const PHOTO_ID = '11111111-1111-4111-8111-111111111111';
 
 beforeAll(() => {
   process.env.SESSION_SECRET = SECRET;
@@ -23,9 +24,22 @@ describe('proxy', () => {
   });
 
   it('returns 401 for api routes without a session', async () => {
-    const res = await proxy(new NextRequest('http://localhost/api/photos/x'));
+    const res = await proxy(new NextRequest('http://localhost/api/blob-upload', { method: 'POST' }));
     expect(res.status).toBe(401);
     expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+  });
+
+  it('returns 401 for photos without a session, with the strict photo CSP', async () => {
+    const res = await proxy(new NextRequest(`http://localhost/api/photos/${PHOTO_ID}`));
+    expect(res.status).toBe(401);
+    expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
+  });
+
+  it('lets an authenticated photo GET through with the strict photo CSP', async () => {
+    const res = await proxy(await withSession(`http://localhost/api/photos/${PHOTO_ID}`));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
+    expect(res.headers.get('x-middleware-request-x-nonce')).toBeNull();
   });
 
   it('lets /login through without a session, with a CSP nonce', async () => {
