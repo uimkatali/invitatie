@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "hash-password": "node scripts/hash-password.mjs",
-    "gen-secret": "node scripts/gen-secret.mjs"
+    "gen-secret": "node scripts/gen-secret.mjs",
+    "check:blob": "node scripts/check-blob.mjs"
   },
   "license": "ISC",
   "dependencies": {
