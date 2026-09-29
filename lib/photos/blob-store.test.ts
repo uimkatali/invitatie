@@ -11,6 +11,7 @@ describe('isTrustedBlobUrl', () => {
     expect(isTrustedBlobUrl('https://public.blob.vercel-storage.com.evil.example/x')).toBe(false);
     expect(isTrustedBlobUrl('https://evilpublic.blob.vercel-storage.com/x')).toBe(false);
     expect(isTrustedBlobUrl('https://abc.public.blob.vercel-storage.com@evil.example/x')).toBe(false);
+    expect(isTrustedBlobUrl('https://abc.public.blob.vercel-storage.com:8443/x')).toBe(false);
     expect(isTrustedBlobUrl('http://abc.public.blob.vercel-storage.com/x')).toBe(false);
     expect(isTrustedBlobUrl('http://169.254.169.254/latest/meta-data')).toBe(false);
   });

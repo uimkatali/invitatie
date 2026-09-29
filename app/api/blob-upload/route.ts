@@ -22,7 +22,10 @@ export async function POST(request: Request) {
     log('warn', 'cross_origin_upload_blocked');
     return error('Cerere respinsa.', 403);
   }
-  const declaredLength = Number(request.headers.get('content-length') ?? '0');
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (!request.headers.get('content-length') || !Number.isFinite(declaredLength) || declaredLength <= 0) {
+    return error('Lipseste Content-Length.', 411);
+  }
   if (declaredLength > MAX_BODY_BYTES) return error('Poza e prea mare (maxim 4 MB).', 413);
 
   const form = await request.formData().catch(() => null);

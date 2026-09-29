@@ -19,8 +19,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       return new Response(null, { status: 502 });
     }
 
-    const upstream = await fetch(photo.url);
-    if (!upstream.ok || !upstream.body) return new Response(null, { status: 502 });
+    // Fara redirecturi si cu timeout: un upstream lent sau care redirectioneaza devine 502.
+    const upstream = await fetch(photo.url, { redirect: 'error', signal: AbortSignal.timeout(10_000) }).catch(() => null);
+    if (!upstream || !upstream.ok || !upstream.body) return new Response(null, { status: 502 });
 
     return new Response(upstream.body, {
       headers: {
