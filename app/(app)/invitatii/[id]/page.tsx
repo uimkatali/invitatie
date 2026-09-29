@@ -34,15 +34,20 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
   if (!invitation) notFound();
 
   const now = new Date();
+  const isRecipient = invitation.toUser === me;
+  const view = pageView(invitation, me, now, revezi);
+  // Amintirile si marcarea notificarilor sunt independente: le facem in paralel.
+  const wantMemories = view === 'summary' && canHaveMemories(invitation, now);
   // Atentie: marcarea ca citite se face aici, la randarea GET a paginii. Un prefetch agresiv al
   // link-urilor catre aceasta pagina (prefetch={true}) ar marca notificarile citite la simplul hover.
-  const markedRead = await markReadForInvitation(db, me, invitation.id, now);
+  const [markedRead, memories] = await Promise.all([
+    markReadForInvitation(db, me, invitation.id, now),
+    wantMemories ? listMemories(db, invitation.id) : Promise.resolve(null),
+  ]);
   // Layout-ul nu se re-randeaza la navigarea client: cerem un refresh ca badge-ul sa se actualizeze.
   // Dupa refresh markedRead e 0 si componenta dispare; restul arborelui ramane montat.
   const refresh = markedRead > 0 ? <RefreshOnMount /> : null;
   const names = displayNames();
-  const isRecipient = invitation.toUser === me;
-  const view = pageView(invitation, me, now, revezi);
 
   if (view !== 'summary') {
     return (
@@ -78,8 +83,6 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
       </>
     );
   }
-
-  const memories = canHaveMemories(invitation, now) ? await listMemories(db, invitation.id) : null;
 
   return (
     <div className="stack">
