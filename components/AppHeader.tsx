@@ -10,6 +10,8 @@ export interface NavItem {
 export function buildNav(unread: number): NavItem[] {
   return [
     { href: '/', label: 'Acasa' },
+    { href: '/calendar', label: 'Calendar' },
+    { href: '/idei', label: 'Idei' },
     { href: '/invitatii/noua', label: 'Invitatie noua' },
     { href: '/notificari', label: 'Notificari', badge: unread },
   ];

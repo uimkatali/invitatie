@@ -201,3 +201,21 @@ fieldset { border: none; }
 .photo-grid img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--pink-100); }
 
 .idea-list { list-style: none; }
+
+/* Faza 3: calendar */
+.calendar-title { text-transform: capitalize; }
+.calendar-card { padding: 12px; overflow-x: auto; }
+.calendar { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+.calendar th { font-size: 0.8rem; color: var(--ink-soft); font-weight: 600; padding: 4px; }
+.calendar td { vertical-align: top; height: 92px; padding: 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.55); }
+.calendar td.out { opacity: 0.45; }
+.calendar td.today { outline: 2px solid var(--pink-300); }
+.day-number { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.calendar-event {
+  display: block; font-size: 0.75rem; padding: 2px 6px; margin-top: 2px; border-radius: 8px; text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .calendar td { height: 56px; padding: 3px; }
+  .calendar-event { font-size: 0; height: 8px; padding: 0; }
+}
