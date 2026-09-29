@@ -3,7 +3,10 @@ import type { Db } from '../db/client';
 import { memories, photos } from '../db/schema';
 import { LIMITS, type UserId } from '../domain';
 import { isUuid, newId } from '../ids';
+import { log } from '../log';
 import { failure, ok, type Result } from '../result';
+import { getInvitation } from '../invitations/queries';
+import { canHaveMemories } from '../memories/service';
 import type { BlobStore } from './blob-store';
 import { IMAGE_EXTENSIONS, sniffImageType } from './validate';
 
@@ -26,19 +29,23 @@ export async function addPhoto(
 ): Promise<Result<{ id: string }>> {
   if (!isUuid(memoryId)) return failure('not_found', MEMORY_NOT_FOUND);
   const [memory] = await db
-    .select({ id: memories.id, author: memories.author })
+    .select({ id: memories.id, author: memories.author, invitationId: memories.invitationId })
     .from(memories)
     .where(eq(memories.id, memoryId))
     .limit(1);
   // Amintirea altcuiva arata la fel ca una inexistenta.
   if (!memory || memory.author !== actor) return failure('not_found', MEMORY_NOT_FOUND);
 
-  if (upload.bytes.length === 0 || upload.bytes.length > LIMITS.photoMaxBytes) {
-    return failure('invalid', 'Poza e prea mare (maxim 4 MB).');
-  }
+  const inv = await getInvitation(db, memory.invitationId);
+  if (!inv) return failure('not_found', MEMORY_NOT_FOUND);
+  if (!canHaveMemories(inv, now)) return failure('invalid', 'Poti adauga poze doar dupa un date acceptat.');
+
+  if (upload.bytes.length === 0) return failure('invalid', 'Fisier gol.');
+  if (upload.bytes.length > LIMITS.photoMaxBytes) return failure('invalid', 'Poza e prea mare (maxim 4 MB).');
   const contentType = sniffImageType(upload.bytes);
   if (!contentType) return failure('invalid', 'Sunt acceptate doar poze JPEG, PNG sau WebP.');
 
+  // Numaratoarea nu e atomica: doua upload-uri paralele ale aceluiasi autor pot depasi limita (impact minor).
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)`.mapWith(Number) })
     .from(photos)
@@ -59,7 +66,11 @@ export async function addPhoto(
       createdAt: now,
     });
   } catch (err) {
-    await blob.del(stored.url);
+    try {
+      await blob.del(stored.url);
+    } catch {
+      log('error', 'orphan_blob', { photoId: id });
+    }
     throw err;
   }
   return ok({ id });

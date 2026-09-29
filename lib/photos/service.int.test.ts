@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { hasTestDb, testDb, resetDb } from '@/test/db';
 import { seedInvitation, seedMemory } from '@/test/fixtures';
-import { photos } from '@/lib/db/schema';
+import { invitations, photos } from '@/lib/db/schema';
 import { LIMITS } from '@/lib/domain';
 import type { BlobStore } from './blob-store';
 import { addPhoto, deletePhoto, getPhotoForViewing } from './service';
@@ -122,5 +122,27 @@ describe.skipIf(!hasTestDb)('photo service', () => {
     await expect(deletePhoto(db, failing, 'ea', added.value.id)).rejects.toThrow('blob unavailable');
     expect(await db.select().from(photos).where(eq(photos.id, added.value.id))).toHaveLength(1);
     expect(stored.size).toBe(1);
+  });
+
+  it('rejects empty files with a dedicated message', async () => {
+    const { store } = fakeBlobStore();
+    const memoryId = await memoryOf('ea');
+    expect(await addPhoto(db, store, 'ea', memoryId, { bytes: new Uint8Array(), width: null, height: null }, NOW)).toMatchObject({
+      ok: false,
+      code: 'invalid',
+      error: 'Fisier gol.',
+    });
+  });
+
+  it('refuses photos when the invitation is no longer accepted or has not started', async () => {
+    const { store, stored } = fakeBlobStore();
+    const invitationId = await seedInvitation(db);
+    const memoryId = await seedMemory(db, invitationId, 'ea');
+    await db.update(invitations).set({ status: 'declined' }).where(eq(invitations.id, invitationId));
+    expect(await addPhoto(db, store, 'ea', memoryId, { bytes: JPEG, width: null, height: null }, NOW)).toMatchObject({
+      ok: false,
+      code: 'invalid',
+    });
+    expect(stored.size).toBe(0);
   });
 });
