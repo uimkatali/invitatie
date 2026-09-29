@@ -25,10 +25,16 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   timeout: 60_000,
+  // Baza de test e un TiDB Cloud la distanta (driver HTTP): actiunile serverului pot dura cateva secunde.
+  expect: { timeout: 15_000 },
   globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
+    // Chromium headless randeaza WebGL in software (SwiftShader): scena completa (bloom, mii de particule) blocheaza
+    // firul principal si face testele lente si instabile. Cu reduced motion scena ruleaza usor, iar titlul
+    // invitatiei apare imediat. Testele care vor scena completa folosesc test.use({ reducedMotion: 'no-preference' }).
+    reducedMotion: 'reduce',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
