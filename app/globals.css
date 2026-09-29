@@ -199,3 +199,5 @@ fieldset { border: none; }
 .photo-grid { list-style: none; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .photo-grid li { display: grid; gap: 6px; }
 .photo-grid img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--pink-100); }
+
+.idea-list { list-style: none; }
