@@ -9,6 +9,10 @@ export interface SceneState {
   swirl: boolean;
   /** Particulele incetinesc (sectiunea de raspuns). */
   settle: boolean;
+  /** Suport WebGL, detectat o singura data de SceneRoot (null = inca necunoscut). */
+  webgl: boolean | null;
+  /** Experienta asteapta primul cadru randat al canvas-ului ca sa porneasca reveal-ul. */
+  revealPending: boolean;
   /** Momentul (secunde, performance.now) cand a pornit reveal-ul cu inima. */
   revealAt: number | null;
   /** Momentul rafalei de la "Da". */
@@ -20,6 +24,8 @@ export const DEFAULT_SCENE_STATE: SceneState = {
   mode: 'ambient',
   swirl: false,
   settle: false,
+  webgl: null,
+  revealPending: false,
   revealAt: null,
   burstAt: null,
 };
@@ -42,12 +48,14 @@ export const sceneStore = {
     };
   },
   set(patch: Partial<SceneState>): void {
+    const changed = (Object.keys(patch) as (keyof SceneState)[]).some((key) => patch[key] !== state[key]);
+    if (!changed) return;
     state = { ...state, ...patch };
     emit();
   },
-  /** Revine la ambient; rafala in curs continua (pagina se schimba chiar dupa "Da"). */
+  /** Revine la ambient; rafala in curs continua (pagina se schimba chiar dupa "Da"), suportul WebGL ramane. */
   reset(): void {
-    state = { ...DEFAULT_SCENE_STATE, burstAt: state.burstAt };
+    state = { ...DEFAULT_SCENE_STATE, burstAt: state.burstAt, webgl: state.webgl };
     emit();
   },
 };

@@ -108,9 +108,19 @@ export function stepParticle(p: Particle, input: StepInput, bounds: Bounds, rand
 }
 
 export const HEART_Z = 2;
+export const HEART_SCALE = 0.16;
+/** Semilatimea inimii in unitati de scala (16 * sin^3 are maximul 16). */
+const HEART_HALF_WIDTH = 16;
+
+/** Scala inimii astfel incat sa incapa in latime (85%) pe ecrane portrait; plafonata la HEART_SCALE. */
+export function heartScaleFor(aspect: number, distance: number, fovDeg: number): number {
+  const halfHeight = distance * Math.tan((fovDeg * Math.PI) / 360);
+  const fit = (aspect * halfHeight * 0.85) / HEART_HALF_WIDTH;
+  return Math.max(0.01, Math.min(HEART_SCALE, fit));
+}
 
 /** Curba clasica a inimii, scalata la cateva unitati. */
-export function heartPoint(t: number, scale = 0.16): { x: number; y: number } {
+export function heartPoint(t: number, scale = HEART_SCALE): { x: number; y: number } {
   const x = 16 * Math.sin(t) ** 3;
   const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
   return { x: x * scale, y: y * scale + 0.4 };
@@ -120,7 +130,7 @@ export function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 }
 
-export const REVEAL_TITLE_DELAY_S = 2.9;
+export const REVEAL_TITLE_DELAY_S = 3.2;
 
 /** Cat de mult sunt trase particulele in forma de inima, la `elapsed` secunde de la deschidere. */
 export function revealMix(elapsed: number): number {

@@ -8,6 +8,8 @@ import {
   revealMix,
   burstStrength,
   REVEAL_TITLE_DELAY_S,
+  HEART_SCALE,
+  heartScaleFor,
   type StepInput,
 } from './particles';
 
@@ -98,5 +100,24 @@ describe('burstStrength', () => {
     expect(burstStrength(0.8)).toBeCloseTo(0.5);
     expect(burstStrength(2)).toBe(0);
     expect(burstStrength(-0.1)).toBe(0);
+  });
+});
+
+describe('heartScaleFor', () => {
+  it('is capped at the default scale on wide screens', () => {
+    expect(heartScaleFor(16 / 9, 6, 55)).toBe(HEART_SCALE);
+  });
+
+  it('shrinks on portrait screens so the heart fits the width', () => {
+    const landscape = heartScaleFor(16 / 9, 6, 55);
+    const portrait = heartScaleFor(9 / 19, 6, 55);
+    expect(portrait).toBeLessThan(landscape);
+    // Semilatimea inimii (16 * scale) ramane in 85% din semilatimea vizibila.
+    const halfWidth = 6 * Math.tan((55 * Math.PI) / 360) * (9 / 19);
+    expect(16 * portrait).toBeLessThanOrEqual(halfWidth * 0.85 + 1e-9);
+  });
+
+  it('never returns a negative or zero scale', () => {
+    expect(heartScaleFor(0.0001, 6, 55)).toBeGreaterThan(0);
   });
 });
