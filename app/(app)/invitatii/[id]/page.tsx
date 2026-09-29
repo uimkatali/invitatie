@@ -5,12 +5,15 @@ import { displayNames } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { getInvitation } from '@/lib/invitations/queries';
 import { MAX_FUTURE_MS, canPerform } from '@/lib/invitations/state-machine';
+import { listMemories } from '@/lib/memories/queries';
+import { canHaveMemories } from '@/lib/memories/service';
 import { markReadForInvitation } from '@/lib/notifications/queries';
 import { toLocalInputValue } from '@/lib/time';
 import { flashMessage } from './flash';
 import InvitationDetails from './InvitationDetails';
 import ResponsePanel from './ResponsePanel';
 import CreatorActions from './CreatorActions';
+import MemoriesSection from './MemoriesSection';
 import { respondAction, acceptProposalAction, cancelInvitationAction } from './actions';
 
 interface InvitationPageProps {
@@ -32,6 +35,7 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
   const markedRead = await markReadForInvitation(db, me, invitation.id, now);
   const names = displayNames();
   const canRespond = canPerform(invitation, me, 'accept', now);
+  const memories = canHaveMemories(invitation, now) ? await listMemories(db, invitation.id) : null;
 
   return (
     <div className="stack">
@@ -61,6 +65,7 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
         }
         cancel={canPerform(invitation, me, 'cancel', now) ? cancelInvitationAction.bind(null, invitation.id) : null}
       />
+      {memories && <MemoriesSection invitationId={invitation.id} me={me} names={names} memories={memories} />}
     </div>
   );
 }

@@ -183,3 +183,19 @@ fieldset { border: none; }
   .notification { flex-direction: column; }
   .hero { padding: 22px; }
 }
+
+/* Faza 3: amintiri si poze */
+.rating { display: flex; gap: 6px; }
+.rating-option { position: relative; font-size: 1.8rem; color: #e8c9d4; cursor: pointer; }
+.rating-option input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.rating:has(.rating-option:nth-child(1) input:checked) .rating-option:nth-child(-n + 1),
+.rating:has(.rating-option:nth-child(2) input:checked) .rating-option:nth-child(-n + 2),
+.rating:has(.rating-option:nth-child(3) input:checked) .rating-option:nth-child(-n + 3),
+.rating:has(.rating-option:nth-child(4) input:checked) .rating-option:nth-child(-n + 4),
+.rating:has(.rating-option:nth-child(5) input:checked) .rating-option:nth-child(-n + 5) { color: var(--pink-300); }
+.rating-option:has(input:focus-visible) { outline: 3px solid var(--blue-300); border-radius: 8px; }
+.hearts { color: var(--pink-300); font-size: 1.4rem; letter-spacing: 2px; }
+.hearts-empty { color: #e8c9d4; }
+.photo-grid { list-style: none; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+.photo-grid li { display: grid; gap: 6px; }
+.photo-grid img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--pink-100); }
