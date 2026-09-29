@@ -22,8 +22,26 @@ export function decayWind(dt: number): void {
   pointer.wind *= Math.exp(-dt * 1.5);
 }
 
+let maxScroll = 0;
+
+function measureScroll(): void {
+  maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+}
+
+/** Masoara o data si la fiecare schimbare de dimensiune, ca sa nu citim layout-ul in fiecare cadru. */
+export function trackScrollExtent(): () => void {
+  measureScroll();
+  const observer = new ResizeObserver(measureScroll);
+  observer.observe(document.documentElement);
+  observer.observe(document.body);
+  window.addEventListener('resize', measureScroll);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener('resize', measureScroll);
+  };
+}
+
 export function readScrollProgress(): number {
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  if (max <= 0) return 0;
-  return Math.min(1, Math.max(0, window.scrollY / max));
+  if (maxScroll <= 0) return 0;
+  return Math.min(1, Math.max(0, window.scrollY / maxScroll));
 }

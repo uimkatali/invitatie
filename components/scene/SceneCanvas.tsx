@@ -8,7 +8,7 @@ import ParticleField from './ParticleField';
 import HeartBurst from './HeartBurst';
 import GradientBackground from './GradientBackground';
 import CameraRig from './CameraRig';
-import { onPointerMove } from './input';
+import { onPointerMove, trackScrollExtent } from './input';
 import { useSceneState } from './useSceneState';
 
 export default function SceneCanvas({ reduced }: { reduced: boolean }) {
@@ -21,12 +21,16 @@ export default function SceneCanvas({ reduced }: { reduced: boolean }) {
     const onVisibility = () => setVisible(!document.hidden);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pointermove', onPointerMove, { passive: true });
+    const stopTracking = trackScrollExtent();
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pointermove', onPointerMove);
+      stopTracking();
     };
   }, []);
 
+  // Cu composer, anti-aliasing-ul vine din multisampling; fara composer (mobil / reduced) il pastreaza canvas-ul.
+  const useComposer = !reduced && !isMobile;
   const budget = reduced ? TOTAL_PARTICLES.reduced : isMobile ? TOTAL_PARTICLES.mobile : TOTAL_PARTICLES.desktop;
   const counts = particleCounts(config, budget);
 
@@ -34,7 +38,7 @@ export default function SceneCanvas({ reduced }: { reduced: boolean }) {
     <Canvas
       dpr={[1, 1.5]}
       frameloop={visible ? 'always' : 'never'}
-      gl={{ antialias: !isMobile, powerPreference: 'high-performance' }}
+      gl={{ antialias: !useComposer, powerPreference: 'high-performance' }}
       camera={{ position: [0, 0, 8], fov: 55, near: 0.1, far: 60 }}
     >
       <GradientBackground top={config.sky.top} bottom={config.sky.bottom} />
@@ -54,9 +58,9 @@ export default function SceneCanvas({ reduced }: { reduced: boolean }) {
         />
       ))}
       {!reduced && <HeartBurst />}
-      {!reduced && !isMobile && (
-        <EffectComposer>
-          <Bloom intensity={0.35} luminanceThreshold={0.8} mipmapBlur />
+      {useComposer && (
+        <EffectComposer multisampling={4}>
+          <Bloom intensity={0.35} luminanceThreshold={0.95} mipmapBlur />
         </EffectComposer>
       )}
     </Canvas>

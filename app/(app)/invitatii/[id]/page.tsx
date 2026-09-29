@@ -13,6 +13,7 @@ import { canHaveMemories } from '@/lib/memories/service';
 import { markReadForInvitation } from '@/lib/notifications/queries';
 import { formatDateTimeRo, toLocalInputValue } from '@/lib/time';
 import { flashMessage } from './flash';
+import { pageView } from './page-view';
 import InvitationDetails from './InvitationDetails';
 import ResponsePanel from './ResponsePanel';
 import CreatorActions from './CreatorActions';
@@ -41,10 +42,9 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
   const refresh = markedRead > 0 ? <RefreshOnMount /> : null;
   const names = displayNames();
   const isRecipient = invitation.toUser === me;
-  const canRespond = canPerform(invitation, me, 'accept', now);
-  const replay = revezi === '1' && isRecipient;
+  const view = pageView(invitation, me, now, revezi);
 
-  if (canRespond || replay) {
+  if (view !== 'summary') {
     return (
       <>
         {refresh}
@@ -60,7 +60,7 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
             fromName: names[invitation.fromUser],
           }}
         >
-          {canRespond ? (
+          {view === 'experience-respond' ? (
             <ResponsePanel
               action={respondAction.bind(null, invitation.id)}
               minDateTime={toLocalInputValue(now)}
@@ -96,7 +96,7 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
         names={names}
         isFuture={invitation.startsAt.getTime() > now.getTime()}
       />
-      {isRecipient && (
+      {isRecipient && invitation.status !== 'cancelled' && (
         <div className="row">
           <Link href={`/invitatii/${invitation.id}?revezi=1`} className="btn btn-ghost">
             Revezi invitatia

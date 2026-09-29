@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mulberry32 } from '@/lib/scene/random';
 import {
   WORLD_BOUNDS,
   HEART_Z,
+  HEART_SCALE,
   burstStrength,
   createParticles,
   heartPoint,
+  heartScaleFor,
   revealMix,
   stepParticle,
   type StepInput,
@@ -37,7 +39,8 @@ export default function ParticleField({ kind, count, palette, seed, reduced }: P
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  useEffect(() => {
+  // Layout effect: culorile exista inainte de primul cadru (fara clipire alba).
+  useLayoutEffect(() => {
     const instanced = mesh.current;
     if (!instanced) return;
     const color = new THREE.Color();
@@ -48,10 +51,15 @@ export default function ParticleField({ kind, count, palette, seed, reduced }: P
     if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true;
   }, [particles, palette]);
 
-  useFrame((_, delta) => {
+  useFrame(({ camera, size }, delta) => {
     const instanced = mesh.current;
     if (!instanced) return;
-    const scene = sceneStore.get();
+    let scene = sceneStore.get();
+    // Primul cadru randat porneste reveal-ul (titlul se sincronizeaza cu el).
+    if (scene.revealPending) {
+      sceneStore.set({ revealAt: nowSeconds(), revealPending: false });
+      scene = sceneStore.get();
+    }
     const now = nowSeconds();
     const reveal = reduced || scene.revealAt === null ? 0 : revealMix(now - scene.revealAt);
     const burst = reduced || scene.burstAt === null ? 0 : burstStrength(now - scene.burstAt);
@@ -63,12 +71,17 @@ export default function ParticleField({ kind, count, palette, seed, reduced }: P
     input.swirl = scene.swirl && !reduced ? 1 : 0;
     input.burst = burst;
 
+    let heartScale = HEART_SCALE;
+    if (reveal > 0 && camera instanceof THREE.PerspectiveCamera) {
+      heartScale = heartScaleFor(size.width / size.height, Math.abs(camera.position.z - HEART_Z), camera.fov);
+    }
+
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       stepParticle(p, input, WORLD_BOUNDS, random);
       let { x, y, z } = p;
       if (reveal > 0) {
-        const target = heartPoint((i / particles.length) * Math.PI * 2);
+        const target = heartPoint((i / particles.length) * Math.PI * 2, heartScale);
         x += (target.x - x) * reveal;
         y += (target.y - y) * reveal;
         z += (HEART_Z - z) * reveal;

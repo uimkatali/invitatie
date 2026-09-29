@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Countdown from '@/components/Countdown';
 import type { ThemeId } from '@/lib/domain';
-import { REVEAL_TITLE_DELAY_S } from '@/lib/scene/particles';
+import { REVEAL_FALLBACK_MS, titleDelayMs } from '@/lib/scene/reveal';
 import { nowSeconds, sceneStore } from '@/lib/scene/store';
 
 export interface ExperienceInvitation {
@@ -29,13 +29,41 @@ export default function InvitationExperience({ invitation, theme, children }: In
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo(0, 0);
-    sceneStore.set({ theme, mode: 'experience', revealAt: nowSeconds() });
-    const timer = window.setTimeout(() => setRevealed(true), reduced ? 0 : REVEAL_TITLE_DELAY_S * 1000);
+    // Reveal-ul porneste cand canvas-ul randeaza primul cadru (revealAt); titlul urmeaza dupa el.
+    sceneStore.set({ theme, mode: 'experience', revealPending: !reduced });
+
+    let timer: number | undefined;
+    let shown = false;
+    const show = () => {
+      shown = true;
+      setRevealed(true);
+    };
+    const schedule = () => {
+      if (shown || timer !== undefined) return;
+      const { webgl, revealAt } = sceneStore.get();
+      const delay = titleDelayMs({ reduced, webgl, revealAt, now: nowSeconds() });
+      if (delay !== null) timer = window.setTimeout(show, delay);
+    };
+    const unsubscribe = sceneStore.subscribe(schedule);
+    schedule();
+    // Canvas lent sau absent: titlul apare oricum, iar reveal-ul cu inima nu mai porneste.
+    const fallback = window.setTimeout(() => {
+      if (timer !== undefined || shown) return;
+      sceneStore.set({ revealPending: false });
+      show();
+    }, REVEAL_FALLBACK_MS);
+
     return () => {
+      unsubscribe();
+      window.clearTimeout(fallback);
       window.clearTimeout(timer);
       sceneStore.reset();
     };
   }, [theme]);
+
+  useEffect(() => {
+    root.current?.classList.add('js-ready');
+  }, []);
 
   useEffect(() => {
     const element = root.current;
@@ -49,7 +77,9 @@ export default function InvitationExperience({ invitation, theme, children }: In
           if (section === 'answer') sceneStore.set({ settle: entry.isIntersecting });
         }
       },
-      { threshold: 0.45 },
+      // Sectiunea conteaza cand varful ei intra in partea de sus (75%) a ecranului; functioneaza si pentru sectiuni
+      // mai inalte decat ecranul, unde un prag de raport de intersectie nu s-ar atinge niciodata.
+      { threshold: 0, rootMargin: '0px 0px -25% 0px' },
     );
     element.querySelectorAll('[data-section]').forEach((section) => observer.observe(section));
     return () => observer.disconnect();
@@ -62,7 +92,9 @@ export default function InvitationExperience({ invitation, theme, children }: In
       <section data-section="reveal" className={`exp-section exp-reveal${revealed ? ' is-visible' : ''}`}>
         <p className="eyebrow">{invitation.fromName} te invita</p>
         <h1 className="exp-title">{invitation.title}</h1>
-        <p className="exp-scroll-hint">Deruleaza ↓</p>
+        <p className="exp-scroll-hint">
+          Deruleaza <span aria-hidden="true">↓</span>
+        </p>
       </section>
 
       <section data-section="message" className="exp-section">

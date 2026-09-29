@@ -1,5 +1,7 @@
 # Faza 4: Scena 3D - Implementation Plan
 
+> **Nota dupa review:** dupa implementare au urmat fixuri (`fix(scene): ...`): observer cu `rootMargin` in loc de prag, rafala ancorata la camera, scala inimii dupa aspect, reveal legat de primul cadru randat (`lib/scene/reveal.ts`, `webgl` / `revealPending` in store), `pageView` in `app/(app)/invitatii/[id]/page-view.ts` si altele minore. Blocurile de cod de mai jos sunt punctul de pornire; **repo-ul este sursa de adevar** pentru `components/scene/*` si `lib/scene/*`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fundal 3D cu frunze si fulgi pastel (roz -> baby blue) pe toate paginile si experienta scroll-driven la deschiderea unei invitatii primite: reveal cu inima, camera care calatoreste prin particule, rafala la "Da".
