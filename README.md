@@ -45,7 +45,7 @@ Testele E2E cer o data `npx playwright install chromium`. Detalii si variabilele
 - `app/`: pagini si Server Actions (subtiri: validare + apel de serviciu)
 - `lib/`: logica. Serviciile primesc `db` si `now`, deci sunt testate pe o baza TiDB separata (`dates_test`)
 - `lib/invitations/state-machine.ts`: singura sursa de adevar pentru ce se poate face cu o invitatie
-- `lib/env.ts`: variabilele de mediu, validate la prima utilizare (aplicatia refuza sa porneasca fara ele)
+- `lib/env.ts`: variabilele de mediu, validate la prima utilizare (nu la build: `npm run build` merge si fara ele; o variabila lipsa da `EnvError` la prima cerere care o foloseste, vizibil in Logs)
 - `components/`: componente comune; `components/scene/` + `lib/scene/`: scena 3D (matematica in functii pure, testate)
 - `proxy.ts`: CSP cu nonce si blocarea rutelor fara sesiune
 - `drizzle/`: migrarile SQL; `test/`: helperi si fixtures pentru teste
