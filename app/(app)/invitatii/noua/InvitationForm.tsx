@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { createInvitationAction } from './actions';
 import Field from '@/components/ui/Field';
 import SubmitButton from '@/components/ui/SubmitButton';
+import SceneController from '@/components/scene/SceneController';
 import { LIMITS, THEMES, THEME_LABELS, type ThemeId } from '@/lib/domain';
 
 export interface InvitationDefaults {
@@ -32,6 +33,7 @@ export default function InvitationForm({ defaults, minDateTime, maxDateTime }: I
 
   return (
     <form action={formAction} className="card form">
+      <SceneController theme={theme} />
       <input type="hidden" name="ideaId" defaultValue={value('ideaId', defaults.ideaId)} />
 
       <Field label="Titlu" htmlFor="title" error={error('title')}>

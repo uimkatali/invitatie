@@ -5,6 +5,7 @@ import Field from '@/components/ui/Field';
 import SubmitButton from '@/components/ui/SubmitButton';
 import { LIMITS } from '@/lib/domain';
 import type { ActionState } from '@/lib/result';
+import { triggerBurst } from '@/lib/scene/store';
 
 type Choice = 'accept' | 'decline' | 'reschedule';
 
@@ -31,7 +32,13 @@ export default function ResponsePanel({ action, minDateTime, maxDateTime }: Resp
   const [choice, setChoice] = useState<Choice>(isChoice(submittedChoice) ? submittedChoice : 'accept');
 
   return (
-    <form action={formAction} className="card form response-panel">
+    <form
+      action={formAction}
+      className="card form response-panel"
+      onSubmit={() => {
+        if (choice === 'accept') triggerBurst();
+      }}
+    >
       <h2>Raspunsul tau</h2>
       <fieldset className="field">
         <legend className="sr-only">Alege raspunsul</legend>

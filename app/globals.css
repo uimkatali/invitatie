@@ -225,3 +225,30 @@ fieldset { border: none; }
 /* Faza 4: scena 3D */
 .scene-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .scene-layer canvas { width: 100% !important; height: 100% !important; display: block; }
+
+/* Faza 4: experienta invitatiei */
+.experience { display: grid; }
+.exp-section {
+  min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 12px; text-align: center; padding: 48px 0;
+  opacity: 0; transform: translateY(24px); transition: opacity 700ms ease, transform 700ms ease;
+}
+.exp-section.is-visible { opacity: 1; transform: none; }
+.exp-reveal { min-height: calc(100vh - 80px); }
+.exp-title { font-size: clamp(2.5rem, 9vw, 5.5rem); text-shadow: 0 4px 30px rgba(255, 255, 255, 0.8); }
+.exp-card {
+  width: min(640px, 100%); padding: 32px; border-radius: 28px;
+  background: var(--glass); border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+.exp-line {
+  font-family: var(--font-display); font-size: 1.3rem; line-height: 1.5; margin: 6px 0;
+  opacity: 0; transform: translateY(10px); transition: opacity 600ms ease, transform 600ms ease;
+}
+.is-visible .exp-line { opacity: 1; transform: none; }
+.exp-scroll-hint { margin-top: 24px; color: var(--ink-soft); animation: exp-bob 1.8s ease-in-out infinite; }
+@keyframes exp-bob { 50% { transform: translateY(6px); } }
+.exp-answer > * { width: min(560px, 100%); text-align: left; }
+@media (prefers-reduced-motion: reduce) {
+  .exp-section, .exp-line { opacity: 1 !important; transform: none !important; }
+  .exp-scroll-hint { animation: none; }
+}
