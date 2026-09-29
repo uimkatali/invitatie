@@ -124,6 +124,8 @@ Primul e `DATABASE_URL`, al doilea e `TEST_DATABASE_URL`. Se scriu **exact** asa
    3. Alternativa: proiect -> **Settings** -> **Environment Variables** -> `BLOB_READ_WRITE_TOKEN` -> iconita de ochi (**Reveal**) -> copiaza-o.
    4. Valoarea o pui in `.env.local` la pasul 4.2 (fara ghilimele).
 
+> Despre confidentialitatea pozelor: fisierele sunt stocate in Blob cu acces "public", dar cu un URL cu sufix aleator care nu ajunge niciodata in browser; aplicatia le serveste doar prin `/api/photos/...`, dupa verificarea sesiunii. Risc acceptat: cine ajunge la URL-ul brut al unei poze (din baza de date sau din loguri) o poate deschide. De aceea tratam URL-urile Blob ca pe niste secrete: nu le copia in chat si nu le publica.
+
 > Pana pui tokenul real, aplicatia porneste si totul merge, **cu exceptia pozelor**: incarcarea unei poze da eroare. Ca sa poti rula aplicatia inainte de acest pas, pune in `.env.local` la `BLOB_READ_WRITE_TOKEN` o valoare oarecare (ex. `deocamdata`); variabila nu poate lipsi.
 
 ### 3.2 Scoate ce nu mai folosim (important pentru securitate)
@@ -325,7 +327,11 @@ Apoi:
   DELETE FROM login_attempts;
   ```
   (Baza `dates` e folosita si local, si in productie, deci comanda deblocheaza ambele.)
-- **Vezi erorile aplicatiei:** Vercel -> proiect -> **Logs** -> cauta `"level":"error"`.
+- **Vezi erorile aplicatiei:** Vercel -> proiect -> **Logs** -> in caseta de cautare scrie `login_error` (sau `EnvError`, sau `"level":"error"`). Fiecare linie e un JSON, de exemplu:
+  ```json
+  {"level":"error","event":"login_error","time":"...","reason":"EnvError","detail":"Variabile de mediu lipsa sau invalide: SESSION_SECRET (Too small: expected string to have >=32 characters)"}
+  ```
+  `reason` e tipul erorii. Pentru o variabila de mediu gresita, `detail` spune care variabila (niciodata valoarea ei). Pentru o eroare de baza de date apar `dbCode` si `dbKind` (`access_denied` = user sau parola gresite, `unknown_database` = baza nu exista, `table_missing` = lipsesc migrarile, `db_error` = alta eroare). Textul mesajelor voastre nu se logheaza niciodata.
 
 ---
 

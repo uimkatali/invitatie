@@ -13,6 +13,7 @@
 - [ ] `.env.local` si `.env.test.local` NU apar in `git status` / pe GitHub
 - [ ] Dependabot e activ (`.github/dependabot.yml` e in repo; GitHub -> repo -> Settings -> Code security -> Dependabot alerts: Enabled)
 - [ ] Functiile ruleaza in `fra1` (setat in `vercel.json`; verifica Vercel -> Project -> Settings -> Functions)
+- [ ] URL-urile din Blob store se trateaza ca secrete: nu se logheaza, nu se afiseaza, nu se copiaza in chat (pozele sunt stocate cu acces `public`, protejate doar de sufixul aleator al URL-ului; risc acceptat, vezi planul overview, abaterea 9)
 - [ ] Baza `dates_test` e separata de `dates`; testele nu ating niciodata baza reala (au o garda pe numele bazei)
 
 ## Ce apara aplicatia (de stiut, nu de bifat)
@@ -20,7 +21,7 @@
 - **Sesiune:** cookie `session`, `httpOnly`, `SameSite=Lax`, `Secure` in productie, valabil 30 de zile. Semnat cu `SESSION_SECRET`.
 - **Login:** maxim 5 incercari gresite per IP in 15 minute (dupa aceea se blocheaza chiar si parola corecta); IP-ul se stocheaza doar ca HMAC.
 - **CSP:** nonce nou la fiecare cerere, `script-src 'self' 'nonce-...' 'strict-dynamic'`, fara `unsafe-eval` in productie, `frame-ancestors 'none'`, `object-src 'none'`.
-- **Poze:** se servesc doar prin `/api/photos/<id>` dupa verificarea sesiunii, cu `Content-Security-Policy: default-src 'none'; sandbox`, `nosniff` si fara redirecturi (un URL din DB care nu e pe Vercel Blob nu se acceseaza niciodata).
+- **Poze:** se servesc doar prin `/api/photos/<id>` dupa verificarea sesiunii (stocate in Blob cu acces `public` si URL cu sufix aleator, care nu ajunge la browser), cu `Content-Security-Policy: default-src 'none'; sandbox`, `nosniff` si fara redirecturi (un URL din DB care nu e pe Vercel Blob nu se acceseaza niciodata).
 - **Upload:** `/api/blob-upload` cere sesiune, acelasi origin, `Content-Length` (411 fara), maxim 4 MB (413) si accepta doar imagini reale (JPEG, PNG, WebP; verificate dupa continut, nu dupa tipul declarat). Un user nu poate incarca in amintirea celuilalt.
 - **Headere:** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy` restrictiv, HSTS in productie, fara `X-Powered-By`.
 - **Continut utilizator:** afisat ca text (React), niciodata ca HTML; mesajele flash vin dintr-o lista fixa, nu din URL.
