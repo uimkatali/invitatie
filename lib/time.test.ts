@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLocalDateTime, toLocalInputValue, localDateKey, formatDateTimeRo } from './time';
+import { parseLocalDateTime, toLocalInputValue, localDateKey, formatDateTimeRo, formatShortRo } from './time';
 
 describe('parseLocalDateTime', () => {
   it('converts summer time (UTC+3)', () => {
@@ -49,5 +49,21 @@ describe('formatDateTimeRo', () => {
     const text = formatDateTimeRo(new Date('2026-07-25T17:00:00Z'));
     expect(text).toContain('iulie');
     expect(text).toContain('20:00');
+  });
+
+  it('strips diacritics like the rest of the UI copy', () => {
+    // 2026-09-26 este sambata (in ro-RO: "sâmbătă"); 2026-03-15 este duminica, luna martie.
+    const saturday = formatDateTimeRo(new Date('2026-09-26T17:00:00Z'));
+    expect(saturday.toLowerCase()).toContain('sambata');
+    expect(saturday).toMatch(/^[ -~]+$/);
+    expect(formatDateTimeRo(new Date('2026-02-11T10:00:00Z'))).toMatch(/^[ -~]+$/);
+  });
+});
+
+describe('formatShortRo', () => {
+  it('formats day, short month and time without diacritics', () => {
+    const text = formatShortRo(new Date('2026-09-26T17:00:00Z'));
+    expect(text).toContain('20:00');
+    expect(text).toMatch(/^[ -~]+$/);
   });
 });

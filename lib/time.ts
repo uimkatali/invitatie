@@ -90,10 +90,15 @@ const shortFormatter = new Intl.DateTimeFormat('ro-RO', {
   minute: '2-digit',
 });
 
+/** Textele din interfata sunt fara diacritice ("sâmbătă" -> "sambata"): NFD, apoi fara semnele combinate. */
+function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 export function formatDateTimeRo(date: Date): string {
-  return longFormatter.format(date);
+  return stripDiacritics(longFormatter.format(date));
 }
 
 export function formatShortRo(date: Date): string {
-  return shortFormatter.format(date);
+  return stripDiacritics(shortFormatter.format(date));
 }
