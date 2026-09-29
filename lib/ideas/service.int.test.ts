@@ -4,7 +4,8 @@ import { seedInvitation } from '@/test/fixtures';
 import { LIMITS } from '@/lib/domain';
 import { ideas as ideasTable } from '@/lib/db/schema';
 import { newId } from '@/lib/ids';
-import { countUnread } from '../notifications/queries';
+import { countUnread, markIdeaNotificationsRead } from '../notifications/queries';
+import { createInvitation } from '../invitations/service';
 import { createIdea, deleteIdea } from './service';
 import { listIdeas, getIdea } from './queries';
 
@@ -22,6 +23,34 @@ describe.skipIf(!hasTestDb)('idea service', () => {
     if (!r.ok) throw new Error(r.error);
     return r.value.id;
   }
+
+  it('marks only idea_added notifications of that user as read', async () => {
+    await idea('el');
+    await idea('el');
+    const invitation = await createInvitation(
+      db,
+      'el',
+      {
+        title: 'Cina',
+        message: 'Te astept',
+        location: 'Acasa',
+        startsAt: new Date('2026-10-05T17:00:00Z'),
+        dressCode: null,
+        theme: 'amandoua',
+        ideaId: null,
+      },
+      NOW,
+    );
+    expect(invitation.ok).toBe(true);
+    expect(await countUnread(db, 'ea')).toBe(3);
+
+    // Nu marcheaza notificarile altui utilizator si nici pe cele de invitatie.
+    expect(await markIdeaNotificationsRead(db, 'el', NOW)).toBe(0);
+    expect(await markIdeaNotificationsRead(db, 'ea', NOW)).toBe(2);
+    expect(await countUnread(db, 'ea')).toBe(1);
+    // A doua randare a paginii nu gaseste nimic: nu trebuie sa ceara un refresh.
+    expect(await markIdeaNotificationsRead(db, 'ea', NOW)).toBe(0);
+  });
 
   it('creates an idea and notifies the other user', async () => {
     const id = await idea('el');

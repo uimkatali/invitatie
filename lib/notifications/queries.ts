@@ -58,3 +58,12 @@ export async function markReadForInvitation(db: Db, user: UserId, invitationId: 
     );
   return affectedRows(result);
 }
+
+/** Intoarce cate notificari `idea_added` au fost marcate citite (0 = nimic nou de citit). */
+export async function markIdeaNotificationsRead(db: Db, user: UserId, now: Date): Promise<number> {
+  const result = await db
+    .update(notifications)
+    .set({ readAt: now })
+    .where(and(eq(notifications.recipient, user), eq(notifications.type, 'idea_added'), isNull(notifications.readAt)));
+  return affectedRows(result);
+}
