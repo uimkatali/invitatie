@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import AppHeader, { buildNav } from '@/components/AppHeader';
-import SkyBackground from '@/components/SkyBackground';
+import SceneRoot from '@/components/scene/SceneRoot';
 import { requireSession } from '@/lib/auth/require-session';
 import { displayName } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
   return (
     <>
-      <SkyBackground theme="amandoua" />
+      <SceneRoot />
       <div className="app-shell">
         <AppHeader name={displayName(me)} items={buildNav(unread)} />
         <main className="page">{children}</main>
