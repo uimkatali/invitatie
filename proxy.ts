@@ -37,10 +37,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const user = await verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret());
   const isPublic = PUBLIC_PATHS.has(pathname);
-  // POST-urile de Server Actions poarta header-ul next-action; fiecare Server Action isi verifica
-  // singura sesiunea prin requireSession() (care redirecteaza via protocolul de actiuni al Next),
+  // Doar POST-urile de Server Actions poarta header-ul next-action (un GET cu acest header nu ocoleste
+  // verificarea); fiecare Server Action isi verifica singura sesiunea prin requireSession() (care redirecteaza via protocolul de actiuni al Next),
   // asa ca proxy-ul nu trebuie sa le blocheze sau sa le redirecteze aici.
-  const isAction = request.headers.has('next-action');
+  const isAction = request.method === 'POST' && request.headers.has('next-action');
 
   // Next citeste nonce-ul din header-ul CSP al request-ului si il pune pe scripturile lui.
   const requestHeaders = new Headers(request.headers);

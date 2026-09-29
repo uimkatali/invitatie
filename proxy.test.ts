@@ -77,6 +77,16 @@ describe('proxy', () => {
     expect(res.headers.get('x-middleware-request-x-nonce')).toBeTruthy();
   });
 
+  it('does not let a non-POST request bypass the session check just by sending next-action', async () => {
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      const res = await proxy(new NextRequest('http://localhost/', { method, headers: { 'next-action': 'abc123' } }));
+      expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe('http://localhost/login');
+    }
+    const api = await proxy(new NextRequest('http://localhost/api/blob-upload', { method: 'GET', headers: { 'next-action': 'x' } }));
+    expect(api.status).toBe(401);
+  });
+
   it('lets an unauthenticated POST to /login through', async () => {
     const req = new NextRequest('http://localhost/login', { method: 'POST' });
     const res = await proxy(req);
