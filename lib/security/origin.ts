@@ -4,7 +4,7 @@
  */
 export function isSameOrigin(headers: Headers): boolean {
   const origin = headers.get('origin');
-  const host = headers.get('x-forwarded-host') ?? headers.get('host');
+  const host = (headers.get('x-forwarded-host')?.split(',')[0] ?? headers.get('host'))?.trim();
   if (!origin || !host) return false;
   try {
     return new URL(origin).host === host;
