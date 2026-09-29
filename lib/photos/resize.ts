@@ -14,19 +14,32 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promi
  * Doar in browser. Redimensioneaza si re-encodeaza poza (webp, sau jpeg unde webp nu e suportat).
  * Re-encodarea sterge metadatele EXIF, inclusiv locatia GPS.
  */
-export async function resizeImage(file: File): Promise<{ blob: Blob; width: number; height: number }> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const { width, height } = fitWithin(bitmap.width, bitmap.height);
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Browserul nu poate procesa poza.');
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+async function decode(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch (err) {
+    // Unele browsere nu accepta optiunea (TypeError); reincercam fara ea.
+    if (err instanceof TypeError) return createImageBitmap(file);
+    throw err;
+  }
+}
 
-  let blob = await toBlob(canvas, 'image/webp', 0.85);
-  if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', 0.85);
-  if (!blob) throw new Error('Poza nu a putut fi procesata.');
-  return { blob, width, height };
+export async function resizeImage(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+  const bitmap = await decode(file);
+  try {
+    const { width, height } = fitWithin(bitmap.width, bitmap.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Browserul nu poate procesa poza.');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    let blob = await toBlob(canvas, 'image/webp', 0.85);
+    if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', 0.85);
+    if (!blob) throw new Error('Poza nu a putut fi procesata.');
+    return { blob, width, height };
+  } finally {
+    bitmap.close();
+  }
 }
