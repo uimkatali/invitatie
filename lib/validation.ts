@@ -52,3 +52,21 @@ export const respondSchema = z.discriminatedUnion(
 );
 
 export type RespondInput = z.infer<typeof respondSchema>;
+
+export const memorySchema = z.object({
+  note: required('Textul', LIMITS.memoryNoteMax),
+  rating: z.coerce
+    .number({ error: 'Alege o nota intre 1 si 5' })
+    .int('Alege o nota intre 1 si 5')
+    .min(1, 'Alege o nota intre 1 si 5')
+    .max(5, 'Alege o nota intre 1 si 5'),
+});
+
+export type MemoryInput = z.infer<typeof memorySchema>;
+
+export const ideaSchema = z.object({
+  title: required('Titlul', LIMITS.ideaTitleMax),
+  description: optionalText(LIMITS.ideaDescriptionMax),
+});
+
+export type IdeaInput = z.infer<typeof ideaSchema>;

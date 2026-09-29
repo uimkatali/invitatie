@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { invitationSchema, respondSchema } from './validation';
+import { invitationSchema, respondSchema, memorySchema, ideaSchema } from './validation';
 
 const base = {
   title: '  Cina  ',
@@ -64,5 +64,26 @@ describe('respondSchema', () => {
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error.issues[0]?.message).toBe('Alege un raspuns');
+  });
+});
+
+describe('memorySchema', () => {
+  it('parses note and coerces rating', () => {
+    const r = memorySchema.safeParse({ note: ' A fost minunat ', rating: '5' });
+    expect(r.success && r.data).toEqual({ note: 'A fost minunat', rating: 5 });
+  });
+
+  it('rejects ratings outside 1-5 and empty notes', () => {
+    expect(memorySchema.safeParse({ note: 'ok', rating: '0' }).success).toBe(false);
+    expect(memorySchema.safeParse({ note: 'ok', rating: '6' }).success).toBe(false);
+    expect(memorySchema.safeParse({ note: 'ok', rating: '' }).success).toBe(false);
+    expect(memorySchema.safeParse({ note: '  ', rating: '3' }).success).toBe(false);
+  });
+});
+
+describe('ideaSchema', () => {
+  it('parses title and optional description', () => {
+    const r = ideaSchema.safeParse({ title: 'Picnic', description: '' });
+    expect(r.success && r.data).toEqual({ title: 'Picnic', description: null });
   });
 });
