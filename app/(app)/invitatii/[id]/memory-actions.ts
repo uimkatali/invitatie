@@ -19,7 +19,7 @@ export async function saveMemoryAction(invitationId: string, _prev: ActionState,
   if (!parsed.success) return { ok: false, error: 'Verifica amintirea.', fields: toFieldErrors(parsed.error), values };
   try {
     const result = await saveMemory(getDb(), actor, invitationId, parsed.data, new Date());
-    if (!result.ok) return toActionState(result);
+    if (!result.ok) return { ok: false, error: result.error, fields: result.fields, values };
   } catch (err) {
     log('error', 'save_memory_failed', { reason: errorName(err) });
     return { ok: false, error: GENERIC_ERROR, values };

@@ -16,8 +16,11 @@ export default function PhotoUploader({ memoryId, remaining }: PhotoUploaderProp
 
   async function onChange(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
-    const files = Array.from(input.files ?? []).slice(0, remaining);
+    const selected = Array.from(input.files ?? []);
+    const files = selected.slice(0, remaining);
     if (files.length === 0) return;
+    let uploaded = 0;
+    let finalStatus: string | null = null;
     setBusy(true);
     setStatus(null);
     try {
@@ -34,14 +37,17 @@ export default function PhotoUploader({ memoryId, remaining }: PhotoUploaderProp
           const data: { error?: string } | null = await response.json().catch(() => null);
           throw new Error(data?.error ?? 'Incarcarea a esuat.');
         }
+        uploaded += 1;
       }
-      setStatus('Gata!');
-      router.refresh();
+      finalStatus = selected.length > files.length ? `Am incarcat doar primele ${files.length}.` : 'Gata!';
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Incarcarea a esuat.');
+      finalStatus = err instanceof Error ? err.message : 'Incarcarea a esuat.';
     } finally {
+      setStatus(finalStatus);
       setBusy(false);
       input.value = '';
+      // Pozele deja incarcate trebuie sa apara chiar daca una din urmatoare a esuat.
+      if (uploaded > 0) router.refresh();
     }
   }
 

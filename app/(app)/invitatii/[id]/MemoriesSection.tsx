@@ -14,7 +14,7 @@ interface MemoriesSectionProps {
 
 function Hearts({ rating }: { rating: number }) {
   return (
-    <p className="hearts" aria-label={`${rating} din 5`}>
+    <p className="hearts" role="img" aria-label={`${rating} din 5`}>
       {'♥'.repeat(rating)}
       <span className="hearts-empty">{'♥'.repeat(5 - rating)}</span>
     </p>

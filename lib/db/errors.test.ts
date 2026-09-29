@@ -164,7 +164,8 @@ describe('user text inside the drizzle query wrapper is ignored', () => {
 
   it('still classifies a real DrizzleQueryError wrapping a driver error', async () => {
     const { DrizzleQueryError } = await import('drizzle-orm/errors');
-    const driver = (msg: string) => ({ message: 'fail', status: 400, details: { code: 61100002, message: `Execute SQL fail: ${msg}` } });
+    const driver = (msg: string) =>
+      Object.assign(new Error('fail'), { status: 400, details: { code: 61100002, message: `Execute SQL fail: ${msg}` } });
     const wrap = (msg: string) => new DrizzleQueryError('insert ...', ['Error 1452 (x'], driver(msg));
     expect(isDuplicateKey(wrap("Error 1062 (23000): Duplicate entry '?' for key 'k'"))).toBe(true);
     expect(isTxConflict(wrap('Error 9007 (HY000): Write conflict'))).toBe(true);

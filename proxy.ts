@@ -6,7 +6,8 @@ import { log } from './lib/log';
 const PUBLIC_PATHS = new Set(['/login']);
 const MIN_SECRET_LENGTH = 32;
 // Raspunsurile cu poze sunt doar bytes: CSP-ul strict inlocuieste CSP-ul paginii, fiindca Next aplica
-// intai header-ele din proxy si ignora apoi header-ul setat de route handler.
+// intai header-ele din proxy si ignora apoi header-ul setat de route handler. Pastrat identic cu
+// header-ul propriu al route-ului (app/api/photos/[id]/route.ts).
 const PHOTO_PATH_PREFIX = '/api/photos/';
 const PHOTO_CSP = "default-src 'none'; sandbox";
 

@@ -4,7 +4,15 @@ import { getDb } from '@/lib/db/client';
 import type { InvitationRow } from '@/lib/db/schema';
 import { STATUS_LABELS } from '@/lib/domain';
 import { listInvitationsBetween } from '@/lib/invitations/queries';
-import { formatMonthParam, gridRangeUtc, monthGrid, monthLabelRo, parseMonthParam, shiftMonth } from '@/lib/calendar';
+import {
+  formatMonthParam,
+  gridRangeUtc,
+  isMonthInRange,
+  monthGrid,
+  monthLabelRo,
+  parseMonthParam,
+  shiftMonth,
+} from '@/lib/calendar';
 import { formatDateTimeRo, localDateKey } from '@/lib/time';
 
 const WEEKDAYS = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa', 'Du'];
@@ -26,6 +34,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   }
   const todayKey = localDateKey(now);
   const monthPrefix = formatMonthParam(ref);
+  const prev = shiftMonth(ref, -1);
+  const next = shiftMonth(ref, 1);
   const inThisMonth = invitations.filter((inv) => localDateKey(inv.startsAt).startsWith(monthPrefix));
 
   return (
@@ -33,15 +43,19 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <h1 className="calendar-title">{monthLabelRo(ref)}</h1>
         <div className="row">
-          <Link className="btn btn-ghost" href={`/calendar?luna=${formatMonthParam(shiftMonth(ref, -1))}`}>
-            ‹ Luna trecuta
-          </Link>
+          {isMonthInRange(prev) && (
+            <Link className="btn btn-ghost" href={`/calendar?luna=${formatMonthParam(prev)}`}>
+              ‹ Luna trecuta
+            </Link>
+          )}
           <Link className="btn btn-ghost" href="/calendar">
             Azi
           </Link>
-          <Link className="btn btn-ghost" href={`/calendar?luna=${formatMonthParam(shiftMonth(ref, 1))}`}>
-            Luna viitoare ›
-          </Link>
+          {isMonthInRange(next) && (
+            <Link className="btn btn-ghost" href={`/calendar?luna=${formatMonthParam(next)}`}>
+              Luna viitoare ›
+            </Link>
+          )}
         </div>
       </div>
 
@@ -63,6 +77,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   <td
                     key={day.key}
                     className={`${day.inMonth ? '' : 'out'} ${day.key === todayKey ? 'today' : ''}`}
+                    aria-current={day.key === todayKey ? 'date' : undefined}
                   >
                     <span className="day-number">{day.day}</span>
                     {(byDay.get(day.key) ?? []).map((inv) => (

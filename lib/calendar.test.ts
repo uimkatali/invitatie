@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMonthParam, shiftMonth, formatMonthParam, monthGrid, gridRangeUtc, monthLabelRo } from './calendar';
+import { parseMonthParam, shiftMonth, formatMonthParam, monthGrid, gridRangeUtc, monthLabelRo, isMonthInRange } from './calendar';
 
 const NOW = new Date('2026-09-28T12:00:00Z');
 
@@ -51,5 +51,14 @@ describe('gridRangeUtc', () => {
 describe('monthLabelRo', () => {
   it('names the month in Romanian', () => {
     expect(monthLabelRo({ year: 2026, month: 9 })).toBe('septembrie 2026');
+  });
+});
+
+describe('isMonthInRange', () => {
+  it('accepts 2020-01 through 2100-12 only', () => {
+    expect(isMonthInRange({ year: 2020, month: 1 })).toBe(true);
+    expect(isMonthInRange({ year: 2100, month: 12 })).toBe(true);
+    expect(isMonthInRange({ year: 2019, month: 12 })).toBe(false);
+    expect(isMonthInRange({ year: 2101, month: 1 })).toBe(false);
   });
 });

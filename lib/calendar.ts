@@ -20,7 +20,7 @@ export function parseMonthParam(value: string | undefined, now: Date): MonthRef 
   if (match) {
     const year = Number(match[1]);
     const month = Number(match[2]);
-    if (year >= 2020 && year <= 2100 && month >= 1 && month <= 12) return { year, month };
+    if (isMonthInRange({ year, month })) return { year, month };
   }
   const [year, month] = localDateKey(now).split('-').map(Number);
   return { year, month };
@@ -76,4 +76,12 @@ const monthFormatter = new Intl.DateTimeFormat('ro-RO', { month: 'long', year: '
 
 export function monthLabelRo(ref: MonthRef): string {
   return monthFormatter.format(new Date(Date.UTC(ref.year, ref.month - 1, 15)));
+}
+
+const MIN_YEAR = 2020;
+const MAX_YEAR = 2100;
+
+/** Aceleasi limite ca parseMonthParam: 2020-01 ... 2100-12. */
+export function isMonthInRange(ref: MonthRef): boolean {
+  return ref.year >= MIN_YEAR && ref.year <= MAX_YEAR && ref.month >= 1 && ref.month <= 12;
 }
