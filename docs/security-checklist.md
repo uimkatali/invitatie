@@ -19,7 +19,7 @@
 ## Ce apara aplicatia (de stiut, nu de bifat)
 - **Acces:** `proxy.ts` trimite la `/login` orice pagina fara sesiune valida si raspunde 401 la `/api/*`. Fiecare Server Action verifica singura sesiunea.
 - **Sesiune:** cookie `session`, `httpOnly`, `SameSite=Lax`, `Secure` in productie, valabil 30 de zile. Semnat cu `SESSION_SECRET`.
-- **Login:** maxim 5 incercari gresite per IP in 15 minute (dupa aceea se blocheaza chiar si parola corecta); IP-ul se stocheaza doar ca HMAC.
+- **Login:** maxim 5 incercari gresite per IP in 15 minute (IPv6 grupat pe /64) (dupa aceea se blocheaza chiar si parola corecta); IP-ul se stocheaza doar ca HMAC.
 - **CSP:** nonce nou la fiecare cerere, `script-src 'self' 'nonce-...' 'strict-dynamic'`, fara `unsafe-eval` in productie, `frame-ancestors 'none'`, `object-src 'none'`.
 - **Poze:** se servesc doar prin `/api/photos/<id>` dupa verificarea sesiunii (stocate in Blob cu acces `public` si URL cu sufix aleator, care nu ajunge la browser), cu `Content-Security-Policy: default-src 'none'; sandbox`, `nosniff` si fara redirecturi (un URL din DB care nu e pe Vercel Blob nu se acceseaza niciodata).
 - **Upload:** `/api/blob-upload` cere sesiune, acelasi origin, `Content-Length` (411 fara), maxim 4 MB (413) si accepta doar imagini reale (JPEG, PNG, WebP; verificate dupa continut, nu dupa tipul declarat). Un user nu poate incarca in amintirea celuilalt.
