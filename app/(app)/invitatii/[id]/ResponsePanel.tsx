@@ -14,15 +14,21 @@ const OPTIONS: { value: Choice; label: string }[] = [
   { value: 'reschedule', label: 'Propun alta ora' },
 ];
 
+function isChoice(value: string | undefined): value is Choice {
+  return OPTIONS.some((option) => option.value === value);
+}
+
 interface ResponsePanelProps {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   minDateTime: string;
+  maxDateTime: string;
 }
 
-export default function ResponsePanel({ action, minDateTime }: ResponsePanelProps) {
+export default function ResponsePanel({ action, minDateTime, maxDateTime }: ResponsePanelProps) {
   const [state, formAction] = useActionState(action, null);
-  const [choice, setChoice] = useState<Choice>('accept');
   const failed = state && !state.ok ? state : null;
+  const submittedChoice = failed?.values?.action;
+  const [choice, setChoice] = useState<Choice>(isChoice(submittedChoice) ? submittedChoice : 'accept');
 
   return (
     <form action={formAction} className="card form response-panel">
@@ -47,12 +53,20 @@ export default function ResponsePanel({ action, minDateTime }: ResponsePanelProp
 
       {choice === 'reschedule' && (
         <Field label="Ce ora ti-ar conveni?" htmlFor="proposedAt" error={failed?.fields?.proposedAt} hint="Ora Romaniei">
-          <input id="proposedAt" name="proposedAt" type="datetime-local" required min={minDateTime} />
+          <input
+            id="proposedAt"
+            name="proposedAt"
+            type="datetime-local"
+            required
+            min={minDateTime}
+            max={maxDateTime}
+            defaultValue={failed?.values?.proposedAt ?? ''}
+          />
         </Field>
       )}
 
       <Field label="Un mesaj (optional)" htmlFor="note" error={failed?.fields?.note}>
-        <textarea id="note" name="note" maxLength={LIMITS.responseNoteMax} />
+        <textarea id="note" name="note" maxLength={LIMITS.responseNoteMax} defaultValue={failed?.values?.note ?? ''} />
       </Field>
 
       {failed && (

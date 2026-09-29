@@ -10,12 +10,20 @@ const noop = async () => null;
 
 describe('ResponsePanel', () => {
   it('starts with only the accept radio checked', () => {
-    const html = renderToStaticMarkup(<ResponsePanel action={noop} minDateTime="2026-01-01T10:00" />);
+    const html = renderToStaticMarkup(<ResponsePanel action={noop} minDateTime="2026-01-01T10:00" maxDateTime="2028-01-01T10:00" />);
     const radios = html.match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
     expect(radios).toHaveLength(3);
     const checked = radios.filter((r) => /\schecked(=|\s|>)/.test(r));
     expect(checked).toHaveLength(1);
     expect(checked[0]).toContain('value="accept"');
+  });
+
+  it('limits the proposed date with min and max once "reschedule" is chosen', () => {
+    // Campul apare doar dupa alegerea "reschedule" (state client, imposibil de declansat la randare
+    // statica), deci verificam legarea limitelor direct in sursa.
+    const source = readFileSync(join(process.cwd(), 'app/(app)/invitatii/[id]/ResponsePanel.tsx'), 'utf8');
+    expect(source).toMatch(/min=\{minDateTime\}/);
+    expect(source).toMatch(/max=\{maxDateTime\}/);
   });
 
   // React 19 reset-eaza formularul dupa fiecare <form action>. Un radio controlat (`checked=`)

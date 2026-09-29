@@ -15,13 +15,14 @@ export interface InvitationDefaults {
 interface InvitationFormProps {
   defaults: InvitationDefaults;
   minDateTime: string;
+  maxDateTime: string;
 }
 
 function isTheme(value: string | undefined): value is ThemeId {
   return THEMES.includes(value as ThemeId);
 }
 
-export default function InvitationForm({ defaults, minDateTime }: InvitationFormProps) {
+export default function InvitationForm({ defaults, minDateTime, maxDateTime }: InvitationFormProps) {
   const [state, formAction] = useActionState(createInvitationAction, null);
   const failed = state && !state.ok ? state : null;
   const value = (key: string, fallback = '') => failed?.values?.[key] ?? fallback;
@@ -74,6 +75,7 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
           type="datetime-local"
           required
           min={minDateTime}
+          max={maxDateTime}
           defaultValue={value('startsAt')}
           aria-invalid={Boolean(error('startsAt'))}
         />
@@ -83,7 +85,7 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
         <input id="dressCode" name="dressCode" maxLength={LIMITS.dressCodeMax} defaultValue={value('dressCode')} />
       </Field>
 
-      <fieldset className="field">
+      <fieldset className="field" aria-describedby={error('theme') ? 'theme-error' : undefined}>
         <legend>Tema</legend>
         <div className="choice-grid">
           {THEMES.map((t) => (
@@ -93,7 +95,11 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
             </label>
           ))}
         </div>
-        {error('theme') && <p className="field-error">{error('theme')}</p>}
+        {error('theme') && (
+          <p className="field-error" id="theme-error">
+            {error('theme')}
+          </p>
+        )}
       </fieldset>
 
       {failed && (

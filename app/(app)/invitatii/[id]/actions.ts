@@ -14,6 +14,7 @@ import { pickStrings, toFieldErrors } from '@/lib/form';
 import { log, errorName } from '@/lib/log';
 import { GENERIC_ERROR, toActionState, type ActionState } from '@/lib/result';
 import type { FlashKey } from './flash';
+import { echoResponseValues, type ResponseValues } from './response-values';
 
 const invitationPath = (id: string) => `/invitatii/${id}`;
 
@@ -23,17 +24,19 @@ async function perform(
   action: InvitationAction,
   note: string | null,
   flash: FlashKey,
+  values?: ResponseValues,
 ): Promise<ActionState> {
   let result: Awaited<ReturnType<typeof applyInvitationAction>>;
   try {
     result = await applyInvitationAction(getDb(), actor, invitationId, action, new Date(), note);
   } catch (err) {
     log('error', 'invitation_action_failed', { action: action.type, reason: errorName(err) });
-    return { ok: false, error: GENERIC_ERROR };
+    return { ok: false, error: GENERIC_ERROR, ...(values && { values }) };
   }
   if (!result.ok) {
     if (result.code === 'forbidden') log('warn', 'forbidden_action', { actor, action: action.type });
-    return toActionState(result);
+    const state = toActionState(result);
+    return values && state && !state.ok ? { ...state, values } : state;
   }
   const { event } = result.value;
   after(() => sendNotificationEmail(event));
@@ -46,12 +49,13 @@ async function perform(
 
 export async function respondAction(invitationId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireSession();
-  const parsed = respondSchema.safeParse(pickStrings(formData, ['action', 'proposedAt', 'note']));
-  if (!parsed.success) return { ok: false, error: 'Verifica raspunsul.', fields: toFieldErrors(parsed.error) };
+  const values = echoResponseValues(pickStrings(formData, ['action', 'proposedAt', 'note']));
+  const parsed = respondSchema.safeParse(values);
+  if (!parsed.success) return { ok: false, error: 'Verifica raspunsul.', fields: toFieldErrors(parsed.error), values };
   const input = parsed.data;
   const action: InvitationAction =
     input.action === 'reschedule' ? { type: 'reschedule', proposedAt: input.proposedAt } : { type: input.action };
-  return perform(invitationId, actor, action, input.note, 'raspuns');
+  return perform(invitationId, actor, action, input.note, 'raspuns', values);
 }
 
 export async function acceptProposalAction(invitationId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {

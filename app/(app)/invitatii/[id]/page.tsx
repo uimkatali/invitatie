@@ -4,7 +4,7 @@ import { requireSession } from '@/lib/auth/require-session';
 import { displayNames } from '@/lib/auth/display-names';
 import { getDb } from '@/lib/db/client';
 import { getInvitation } from '@/lib/invitations/queries';
-import { canPerform } from '@/lib/invitations/state-machine';
+import { MAX_FUTURE_MS, canPerform } from '@/lib/invitations/state-machine';
 import { markReadForInvitation } from '@/lib/notifications/queries';
 import { toLocalInputValue } from '@/lib/time';
 import { flashMessage } from './flash';
@@ -49,7 +49,11 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
         isFuture={invitation.startsAt.getTime() > now.getTime()}
       />
       {canRespond && (
-        <ResponsePanel action={respondAction.bind(null, invitation.id)} minDateTime={toLocalInputValue(now)} />
+        <ResponsePanel
+          action={respondAction.bind(null, invitation.id)}
+          minDateTime={toLocalInputValue(now)}
+          maxDateTime={toLocalInputValue(new Date(now.getTime() + MAX_FUTURE_MS))}
+        />
       )}
       <CreatorActions
         acceptProposal={
