@@ -67,7 +67,7 @@ export async function addPhoto(
     });
   } catch (err) {
     try {
-      await blob.del(stored.url);
+      await blob.del(stored.pathname);
     } catch {
       log('error', 'orphan_blob', { photoId: id });
     }
@@ -81,7 +81,7 @@ async function findPhotoWithAuthor(db: Db, photoId: string) {
   const [row] = await db
     .select({
       id: photos.id,
-      blobUrl: photos.blobUrl,
+      blobPathname: photos.blobPathname,
       contentType: photos.contentType,
       author: memories.author,
       invitationId: memories.invitationId,
@@ -105,13 +105,16 @@ export async function deletePhoto(
 ): Promise<Result<{ invitationId: string }>> {
   const photo = await findPhotoWithAuthor(db, photoId);
   if (!photo || photo.author !== actor) return failure('not_found', PHOTO_NOT_FOUND);
-  await blob.del(photo.blobUrl);
+  await blob.del(photo.blobPathname);
   await db.delete(photos).where(eq(photos.id, photo.id));
   return ok({ invitationId: photo.invitationId });
 }
 
-/** Doar pentru route handler-ul care face stream; URL-ul nu se trimite clientului. */
-export async function getPhotoForViewing(db: Db, photoId: string): Promise<{ url: string; contentType: string } | null> {
+/** Doar pentru route handler-ul care face stream; pathname-ul nu se trimite clientului. */
+export async function getPhotoForViewing(
+  db: Db,
+  photoId: string,
+): Promise<{ pathname: string; contentType: string } | null> {
   const photo = await findPhotoWithAuthor(db, photoId);
-  return photo ? { url: photo.blobUrl, contentType: photo.contentType } : null;
+  return photo ? { pathname: photo.blobPathname, contentType: photo.contentType } : null;
 }

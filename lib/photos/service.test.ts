@@ -28,16 +28,18 @@ describe('addPhoto cleanup', () => {
   it('deletes the blob and rethrows the ORIGINAL error when the insert fails', async () => {
     const { addPhoto } = await import('./service');
     const del = vi.fn(async () => {});
-    const store: BlobStore = { put: async (pathname) => ({ url: 'https://x.blob.test/a', pathname }), del };
+    const store: BlobStore = { put: async (pathname) => ({ url: 'https://x.blob.test/a', pathname }), get: async () => null, del };
     const original = new Error('insert failed');
     await expect(addPhoto(fakeDb(original), store, 'ea', MEMORY_ID, { bytes: JPEG, width: null, height: null }, NOW)).rejects.toBe(original);
-    expect(del).toHaveBeenCalledWith('https://x.blob.test/a');
+    // Blob-ul se identifica dupa pathname (URL-ul unui blob privat nu se poate citi anonim).
+    expect(del).toHaveBeenCalledWith(expect.stringMatching(/^photos\/11111111-1111-4111-8111-111111111111\/[0-9a-f-]{36}\.jpg$/));
   });
 
   it('still rethrows the original error when the cleanup deletion also fails', async () => {
     const { addPhoto } = await import('./service');
     const store: BlobStore = {
       put: async (pathname) => ({ url: 'https://x.blob.test/a', pathname }),
+      get: async () => null,
       del: async () => {
         throw new Error('del failed');
       },

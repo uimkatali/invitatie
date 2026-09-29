@@ -14,12 +14,15 @@ function fakeBlobStore() {
   const stored = new Map<string, Uint8Array>();
   const store: BlobStore = {
     async put(pathname, body) {
-      const url = `https://fake.blob.test/${pathname}`;
-      stored.set(url, body);
-      return { url, pathname };
+      stored.set(pathname, body);
+      return { url: `https://fake.private.blob.test/${pathname}`, pathname };
     },
-    async del(url) {
-      stored.delete(url);
+    async get(pathname) {
+      const bytes = stored.get(pathname);
+      return bytes ? { stream: new Response(Uint8Array.from(bytes)).body as ReadableStream<Uint8Array>, contentType: 'image/jpeg' } : null;
+    },
+    async del(pathname) {
+      stored.delete(pathname);
     },
   };
   return { stored, store };
@@ -105,7 +108,10 @@ describe.skipIf(!hasTestDb)('photo service', () => {
     const memoryId = await memoryOf('el');
     const added = await addPhoto(db, store, 'el', memoryId, { bytes: JPEG, width: null, height: null }, NOW);
     if (!added.ok) throw new Error(added.error);
-    expect(await getPhotoForViewing(db, added.value.id)).toMatchObject({ contentType: 'image/jpeg' });
+    expect(await getPhotoForViewing(db, added.value.id)).toMatchObject({
+      pathname: expect.stringMatching(/^photos\/.+\.jpg$/),
+      contentType: 'image/jpeg',
+    });
     expect(await getPhotoForViewing(db, 'not-a-uuid')).toBeNull();
   });
 
@@ -116,6 +122,7 @@ describe.skipIf(!hasTestDb)('photo service', () => {
     if (!added.ok) throw new Error(added.error);
     const failing: BlobStore = {
       put: store.put,
+      get: store.get,
       async del() {
         throw new Error('blob unavailable');
       },
