@@ -11,9 +11,12 @@ export interface AttemptWindow {
   count: number;
 }
 
-/** IP-ul brut nu se stocheaza: doar un HMAC legat de SESSION_SECRET (nu un hash simplu, ca sa nu poata fi brute-forced offline). */
+/**
+ * IP-ul brut nu se stocheaza: doar un HMAC legat de SESSION_SECRET (nu un hash simplu, ca sa nu poata fi brute-forced offline).
+ * Prefixul separa domeniul: acelasi secret semneaza si sesiunile, iar un HMAC de IP nu trebuie sa semene cu altceva semnat cu el.
+ */
 export function hashIp(ip: string, secret: string): string {
-  return createHmac('sha256', secret).update(ip).digest('hex');
+  return createHmac('sha256', secret).update(`login-ip:${ip}`).digest('hex');
 }
 
 /** 'YYYY-MM-DD HH:MM:SS' UTC. Parametrii dintr-un sql`` nu trec prin maparea de tip a coloanei datetime, deci ii formatam explicit. */

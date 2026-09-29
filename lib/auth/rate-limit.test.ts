@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import { MySqlDialect } from 'drizzle-orm/mysql-core';
 import { hashIp, exceedsLimit, toSqlDateTime, buildReserveAttemptQuery, RATE_LIMIT_MAX_FAILURES } from './rate-limit';
@@ -25,6 +26,12 @@ describe('hashIp', () => {
     expect(a).toMatch(/^[0-9a-f]{64}$/);
     expect(hashIp('1.2.3.4', 'x'.repeat(32))).toBe(a);
     expect(hashIp('1.2.3.4', 'y'.repeat(32))).not.toBe(a);
+  });
+
+  it('is domain-separated: the HMAC covers "login-ip:" + ip, not the bare ip', () => {
+    const secret = 'x'.repeat(32);
+    expect(hashIp('1.2.3.4', secret)).toBe(createHmac('sha256', secret).update('login-ip:1.2.3.4').digest('hex'));
+    expect(hashIp('1.2.3.4', secret)).not.toBe(createHmac('sha256', secret).update('1.2.3.4').digest('hex'));
   });
 });
 
