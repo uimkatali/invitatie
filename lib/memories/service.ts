@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { isDuplicateKey } from '../db/errors';
+import { isDuplicateKey, isTxConflict } from '../db/errors';
 import { memories, type InvitationRow } from '../db/schema';
 import { otherUser, type UserId } from '../domain';
 import { newId } from '../ids';
@@ -61,8 +61,9 @@ export async function saveMemory(
       await insertNotification(tx, { recipient: otherUser(actor), type: 'memory_added', invitationId: inv.id, now });
     });
   } catch (err) {
-    // Salvare dubla concurenta: UNIQUE (invitation_id, author) a respins INSERT-ul; refacem ca update.
-    if (!isDuplicateKey(err)) throw err;
+    // Salvare dubla concurenta: UNIQUE (invitation_id, author) a respins INSERT-ul (sau tranzactia a
+    // avut conflict de scriere); refacem ca update daca celalalt request a creat deja randul.
+    if (!isDuplicateKey(err) && !isTxConflict(err)) throw err;
     const winnerId = await findExistingId(db, inv.id, actor);
     if (!winnerId) throw err;
     await updateMemory(db, winnerId, input, now);
