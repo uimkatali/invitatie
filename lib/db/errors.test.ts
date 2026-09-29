@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isForeignKeyViolation, isTxConflict } from './errors';
+import { isForeignKeyViolation, isTxConflict, isDuplicateKey } from './errors';
 
 describe('isTxConflict', () => {
   it('recognizes a TiDB write-conflict DatabaseError (code 9007)', () => {
@@ -68,5 +68,28 @@ describe('isForeignKeyViolation', () => {
     expect(isForeignKeyViolation(undefined)).toBe(false);
     expect(isForeignKeyViolation('nope')).toBe(false);
     expect(isForeignKeyViolation({})).toBe(false);
+  });
+});
+
+describe('isDuplicateKey', () => {
+  it('recognizes code 1062 in details.code (string or number)', () => {
+    expect(isDuplicateKey({ details: { code: '1062', message: 'Duplicate entry' } })).toBe(true);
+    expect(isDuplicateKey({ details: { code: 1062 } })).toBe(true);
+  });
+
+  it('recognizes a top-level code (mysql2 style)', () => {
+    expect(isDuplicateKey({ code: 1062 })).toBe(true);
+  });
+
+  it('falls back to matching the message', () => {
+    expect(isDuplicateKey(new Error("Duplicate entry 'a-el' for key 'uq'"))).toBe(true);
+  });
+
+  it('rejects unrelated errors', () => {
+    expect(isDuplicateKey({ details: { code: '1452', message: 'foreign key constraint fails' } })).toBe(false);
+    expect(isDuplicateKey(new Error('boom'))).toBe(false);
+    expect(isDuplicateKey(null)).toBe(false);
+    expect(isDuplicateKey('nope')).toBe(false);
+    expect(isDuplicateKey({})).toBe(false);
   });
 });

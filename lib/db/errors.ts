@@ -54,3 +54,17 @@ export function isForeignKeyViolation(err: unknown): boolean {
   if (code === FK_VIOLATION_CODE) return true;
   return FK_VIOLATION_MESSAGE.test(driverErrorMessage(err));
 }
+
+// 1062: MySQL/TiDB "duplicate entry for key" (incalcare de UNIQUE / PRIMARY KEY).
+const DUPLICATE_KEY_CODE = '1062';
+const DUPLICATE_KEY_MESSAGE = /duplicate entry/i;
+
+/**
+ * true daca INSERT-ul a esuat pentru ca exista deja un rand cu aceeasi cheie unica
+ * (ex. doua salvari concurente ale aceleiasi amintiri, UNIQUE (invitation_id, author)).
+ */
+export function isDuplicateKey(err: unknown): boolean {
+  const code = driverErrorCode(err);
+  if (code === DUPLICATE_KEY_CODE) return true;
+  return DUPLICATE_KEY_MESSAGE.test(driverErrorMessage(err));
+}
