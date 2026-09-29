@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { hasTestDb, testDb, resetDb } from '@/test/db';
 import { seedInvitation, seedMemory } from '@/test/fixtures';
-import { invitations, photos } from '@/lib/db/schema';
+import { invitations, memories, photos } from '@/lib/db/schema';
 import { LIMITS } from '@/lib/domain';
 import type { BlobStore } from './blob-store';
 import { addPhoto, deletePhoto, getPhotoForViewing } from './service';
@@ -93,7 +93,9 @@ describe.skipIf(!hasTestDb)('photo service', () => {
     expect(await deletePhoto(db, store, 'el', photoId)).toMatchObject({ ok: false, code: 'not_found' });
     expect(stored.size).toBe(1);
 
-    expect((await deletePhoto(db, store, 'ea', photoId)).ok).toBe(true);
+    // Intoarce invitatia din baza de date, ca actiunea sa revalideze pagina corecta (nu una trimisa de client).
+    const [{ invitationId }] = await db.select({ invitationId: memories.invitationId }).from(memories).where(eq(memories.id, memoryId));
+    expect(await deletePhoto(db, store, 'ea', photoId)).toEqual({ ok: true, value: { invitationId } });
     expect(stored.size).toBe(0);
     expect(await db.select().from(photos).where(eq(photos.id, photoId))).toHaveLength(0);
   });

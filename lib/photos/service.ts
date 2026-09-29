@@ -79,7 +79,13 @@ export async function addPhoto(
 async function findPhotoWithAuthor(db: Db, photoId: string) {
   if (!isUuid(photoId)) return null;
   const [row] = await db
-    .select({ id: photos.id, blobUrl: photos.blobUrl, contentType: photos.contentType, author: memories.author })
+    .select({
+      id: photos.id,
+      blobUrl: photos.blobUrl,
+      contentType: photos.contentType,
+      author: memories.author,
+      invitationId: memories.invitationId,
+    })
     .from(photos)
     .innerJoin(memories, eq(photos.memoryId, memories.id))
     .where(eq(photos.id, photoId))
@@ -87,13 +93,21 @@ async function findPhotoWithAuthor(db: Db, photoId: string) {
   return row ?? null;
 }
 
-/** Sterge intai blob-ul; daca stergerea arunca, randul ramane (eroarea se propaga). */
-export async function deletePhoto(db: Db, blob: BlobStore, actor: UserId, photoId: string): Promise<Result> {
+/**
+ * Sterge intai blob-ul; daca stergerea arunca, randul ramane (eroarea se propaga).
+ * Intoarce invitatia din baza de date, ca apelantul sa revalideze pagina corecta.
+ */
+export async function deletePhoto(
+  db: Db,
+  blob: BlobStore,
+  actor: UserId,
+  photoId: string,
+): Promise<Result<{ invitationId: string }>> {
   const photo = await findPhotoWithAuthor(db, photoId);
   if (!photo || photo.author !== actor) return failure('not_found', PHOTO_NOT_FOUND);
   await blob.del(photo.blobUrl);
   await db.delete(photos).where(eq(photos.id, photo.id));
-  return ok(undefined);
+  return ok({ invitationId: photo.invitationId });
 }
 
 /** Doar pentru route handler-ul care face stream; URL-ul nu se trimite clientului. */

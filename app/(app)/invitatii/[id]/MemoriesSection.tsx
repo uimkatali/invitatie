@@ -35,7 +35,7 @@ export default function MemoriesSection({ invitationId, me, names, memories }: M
           <MemoryEditor action={saveMemoryAction.bind(null, invitationId)} note={mine?.note ?? ''} rating={mine?.rating ?? null} />
           {mine ? (
             <>
-              <PhotoGrid photos={mine.photos} invitationId={invitationId} deletable />
+              <PhotoGrid photos={mine.photos} deletable />
               <PhotoUploader memoryId={mine.id} remaining={LIMITS.photosPerMemory - mine.photos.length} />
             </>
           ) : (
@@ -48,7 +48,7 @@ export default function MemoriesSection({ invitationId, me, names, memories }: M
             <>
               <Hearts rating={theirs.rating} />
               <p className="invitation-message">{theirs.note}</p>
-              <PhotoGrid photos={theirs.photos} invitationId={invitationId} deletable={false} />
+              <PhotoGrid photos={theirs.photos} deletable={false} />
             </>
           ) : (
             <p className="muted">{names[other]} nu a scris inca.</p>

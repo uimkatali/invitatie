@@ -28,16 +28,14 @@ export async function saveMemoryAction(invitationId: string, _prev: ActionState,
   return { ok: true, message: 'Amintire salvata.' };
 }
 
-export async function deletePhotoAction(
-  photoId: string,
-  invitationId: string,
-  _prev: ActionState,
-  _formData: FormData,
-): Promise<ActionState> {
+export async function deletePhotoAction(photoId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const actor = await requireSession();
+  let invitationId: string;
   try {
     const result = await deletePhoto(getDb(), vercelBlobStore(env().BLOB_READ_WRITE_TOKEN), actor, photoId);
     if (!result.ok) return toActionState(result);
+    // Din baza de date, nu din client: un id de invitatie trimis de client nu decide ce se revalideaza.
+    invitationId = result.value.invitationId;
   } catch (err) {
     log('error', 'delete_photo_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR };

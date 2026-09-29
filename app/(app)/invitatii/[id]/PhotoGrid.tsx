@@ -4,11 +4,10 @@ import { deletePhotoAction } from './memory-actions';
 
 interface PhotoGridProps {
   photos: PhotoView[];
-  invitationId: string;
   deletable: boolean;
 }
 
-export default function PhotoGrid({ photos, invitationId, deletable }: PhotoGridProps) {
+export default function PhotoGrid({ photos, deletable }: PhotoGridProps) {
   if (photos.length === 0) return null;
   return (
     <ul className="photo-grid">
@@ -24,7 +23,7 @@ export default function PhotoGrid({ photos, invitationId, deletable }: PhotoGrid
           />
           {deletable && (
             <ActionButtonForm
-              action={deletePhotoAction.bind(null, photo.id, invitationId)}
+              action={deletePhotoAction.bind(null, photo.id)}
               label="Sterge"
               variant="danger"
               confirmText="Stergi poza?"
