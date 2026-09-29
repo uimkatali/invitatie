@@ -1,3 +1,5 @@
+import { DrizzleQueryError } from 'drizzle-orm/errors';
+
 /**
  * Forme de eroare pe care le poate arunca driverul HTTP @tidbcloud/serverless
  * (DatabaseError: `{ message, status, details: { message, code } | null }`) sau alte
@@ -16,11 +18,23 @@ interface DriverErrorShape {
 }
 
 const MAX_CAUSE_DEPTH = 5;
-const ERRNO_IN_MESSAGE = /Error (\d+) \(/;
+// Ancorat: doar mesajele de nivel driver incep cu errno-ul ("Error 1062 (23000): ...").
+const ERRNO_IN_MESSAGE = /^(?:Execute SQL fail: )?Error (\d+) \(/;
 
 interface ErrorFacts {
   codes: Set<string>;
   messages: string[];
+}
+
+/**
+ * DrizzleQueryError are mesajul "Failed query: <sql>
+params: <valori>"; valorile pot contine text
+ * introdus de utilizator, deci mesajul (si tot ce e pe nivelul respectiv) nu se citeste niciodata.
+ */
+function isQueryWrapper(err: object): boolean {
+  if (err instanceof DrizzleQueryError) return true;
+  const e = err as DriverErrorShape & { params?: unknown };
+  return 'params' in e || (typeof e.message === 'string' && e.message.startsWith('Failed query:'));
 }
 
 /** Coduri explicite si mesaje de pe fiecare nivel al lantului `cause` (cu limita si garda de cicluri). */
@@ -31,6 +45,10 @@ function collectFacts(err: unknown): ErrorFacts {
   for (let depth = 0; depth < MAX_CAUSE_DEPTH && current && typeof current === 'object' && !seen.has(current); depth++) {
     seen.add(current);
     const e = current as DriverErrorShape;
+    if (isQueryWrapper(current)) {
+      current = e.cause;
+      continue;
+    }
     for (const code of [e.details?.code, e.code]) {
       if (code !== undefined && code !== null) facts.codes.add(String(code));
     }

@@ -142,3 +142,38 @@ describe('errors wrapped by drizzle (cause chain, errno in details.message)', ()
     expect(isDuplicateKey(deep)).toBe(false);
   });
 });
+
+describe('user text inside the drizzle query wrapper is ignored', () => {
+  const hostile = [
+    'Error 9007 (ha)',
+    'a deadlock found',
+    'Error 1452 (x',
+    'Duplicate entry',
+    'write conflict',
+    'foreign key constraint fails',
+  ];
+
+  it.each(hostile)('does not classify a real DrizzleQueryError with params %j', async (text) => {
+    const { DrizzleQueryError } = await import('drizzle-orm/errors');
+    const err = new DrizzleQueryError('insert into `memories` (`note`) values (?)', [text], new TypeError('fetch failed'));
+    expect(err.message).toContain(text);
+    expect(isTxConflict(err)).toBe(false);
+    expect(isForeignKeyViolation(err)).toBe(false);
+    expect(isDuplicateKey(err)).toBe(false);
+  });
+
+  it('still classifies a real DrizzleQueryError wrapping a driver error', async () => {
+    const { DrizzleQueryError } = await import('drizzle-orm/errors');
+    const driver = (msg: string) => ({ message: 'fail', status: 400, details: { code: 61100002, message: `Execute SQL fail: ${msg}` } });
+    const wrap = (msg: string) => new DrizzleQueryError('insert ...', ['Error 1452 (x'], driver(msg));
+    expect(isDuplicateKey(wrap("Error 1062 (23000): Duplicate entry '?' for key 'k'"))).toBe(true);
+    expect(isTxConflict(wrap('Error 9007 (HY000): Write conflict'))).toBe(true);
+    expect(isForeignKeyViolation(wrap('Error 1452 (23000): Cannot add'))).toBe(true);
+    // parametrii ostili nu produc fals pozitiv chiar si cand cauza reala e alta eroare
+    expect(isForeignKeyViolation(wrap('Error 1062 (23000): Duplicate entry'))).toBe(false);
+  });
+
+  it('only reads an errno at the start of a driver-level message', () => {
+    expect(isTxConflict({ message: 'note mentions Error 9007 (x) in passing' })).toBe(false);
+  });
+});
