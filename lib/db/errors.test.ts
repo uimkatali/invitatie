@@ -93,3 +93,52 @@ describe('isDuplicateKey', () => {
     expect(isDuplicateKey({})).toBe(false);
   });
 });
+
+/** Forma reala: DrizzleQueryError (mesaj "Failed query") cu DatabaseError-ul driverului pe `cause`. */
+function drizzleWrapped(mysqlMessage: string) {
+  const driver = { message: 'fail', status: 400, details: { code: 61100002, message: `Execute SQL fail: ${mysqlMessage}` } };
+  return Object.assign(new Error('Failed query: insert into `t` (`id`) values (?)'), { cause: driver });
+}
+
+describe('errors wrapped by drizzle (cause chain, errno in details.message)', () => {
+  it('detects each error kind through the cause chain', () => {
+    const dup = drizzleWrapped("Error 1062 (23000): Duplicate entry '?' for key 'memories.uq_invitation_author'");
+    expect(isDuplicateKey(dup)).toBe(true);
+    expect(isTxConflict(dup)).toBe(false);
+    expect(isForeignKeyViolation(dup)).toBe(false);
+
+    const conflict = drizzleWrapped('Error 9007 (HY000): Write conflict, txnStartTS=1');
+    expect(isTxConflict(conflict)).toBe(true);
+    expect(isDuplicateKey(conflict)).toBe(false);
+
+    expect(isTxConflict(drizzleWrapped('Error 1213 (40001): deadlock'))).toBe(true);
+
+    const fk = drizzleWrapped('Error 1452 (23000): Cannot add or update a child row');
+    expect(isForeignKeyViolation(fk)).toBe(true);
+    expect(isDuplicateKey(fk)).toBe(false);
+  });
+
+  it('extracts the errno from details.message alone, without message text matches', () => {
+    expect(isDuplicateKey({ details: { code: 61100002, message: 'Error 1062 (23000): x' } })).toBe(true);
+    expect(isForeignKeyViolation({ details: { code: 61100002, message: 'Error 1452 (23000): x' } })).toBe(true);
+  });
+
+  it('does not treat the TiDB Cloud API code as an errno, and rejects other errnos', () => {
+    const other = drizzleWrapped('Error 1146 (42S02): Table does not exist');
+    expect(isDuplicateKey(other)).toBe(false);
+    expect(isTxConflict(other)).toBe(false);
+    expect(isForeignKeyViolation(other)).toBe(false);
+    expect(isDuplicateKey({ details: { code: 61100002 } })).toBe(false);
+  });
+
+  it('survives cause cycles and stops at a bounded depth', () => {
+    const a: { cause?: unknown; message: string } = { message: 'a' };
+    const b = { cause: a, message: 'b' };
+    a.cause = b;
+    expect(isDuplicateKey(a)).toBe(false);
+
+    let deep: unknown = { message: 'Error 1062 (23000): dup' };
+    for (let i = 0; i < 10; i++) deep = { message: 'wrapper', cause: deep };
+    expect(isDuplicateKey(deep)).toBe(false);
+  });
+});
