@@ -36,7 +36,7 @@ export default function ResponsePanel({ action, minDateTime }: ResponsePanelProp
                 type="radio"
                 name="action"
                 value={option.value}
-                checked={choice === option.value}
+                defaultChecked={choice === option.value}
                 onChange={() => setChoice(option.value)}
               />
               <span>{option.label}</span>

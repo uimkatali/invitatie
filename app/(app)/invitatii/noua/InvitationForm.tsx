@@ -88,7 +88,7 @@ export default function InvitationForm({ defaults, minDateTime }: InvitationForm
         <div className="choice-grid">
           {THEMES.map((t) => (
             <label key={t} className="choice">
-              <input type="radio" name="theme" value={t} checked={theme === t} onChange={() => setTheme(t)} />
+              <input type="radio" name="theme" value={t} defaultChecked={theme === t} onChange={() => setTheme(t)} />
               <span>{THEME_LABELS[t]}</span>
             </label>
           ))}
