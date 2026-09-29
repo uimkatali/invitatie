@@ -1,3 +1,5 @@
+import { dbErrorCode, dbErrorKind } from './db/errors';
+
 type Level = 'info' | 'warn' | 'error';
 
 /**
@@ -13,4 +15,22 @@ export function log(level: Level, event: string, data: Record<string, unknown> =
 
 export function errorName(err: unknown): string {
   return err instanceof Error ? err.name : 'UnknownError';
+}
+
+/**
+ * Campurile de log pentru o eroare prinsa, fara continut necontrolat:
+ * - `reason`: numele erorii;
+ * - `detail`: mesajul, DOAR pentru EnvError (contine numele variabilelor, niciodata valorile);
+ * - `dbCode` / `dbKind`: errno-ul MySQL si o eticheta scurta, cand exista.
+ * Orice alt mesaj (ex. "Failed query" al drizzle, cu parametrii) nu apare niciodata.
+ */
+export function errorInfo(err: unknown): Record<string, unknown> {
+  const info: Record<string, unknown> = { reason: errorName(err) };
+  if (err instanceof Error && err.name === 'EnvError') info.detail = err.message;
+  const dbCode = dbErrorCode(err);
+  if (dbCode !== null) {
+    info.dbCode = dbCode;
+    info.dbKind = dbErrorKind(err);
+  }
+  return info;
 }

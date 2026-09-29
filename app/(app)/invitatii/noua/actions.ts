@@ -9,7 +9,7 @@ import { createInvitation } from '@/lib/invitations/service';
 import { sendNotificationEmail } from '@/lib/notifications/email';
 import { invitationSchema } from '@/lib/validation';
 import { pickStrings, toFieldErrors } from '@/lib/form';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { GENERIC_ERROR, type ActionState } from '@/lib/result';
 
 const FIELDS = ['title', 'message', 'location', 'startsAt', 'dressCode', 'theme', 'ideaId'] as const;
@@ -30,7 +30,7 @@ export async function createInvitationAction(_prev: ActionState, formData: FormD
     after(() => sendNotificationEmail(event));
     id = result.value.id;
   } catch (err) {
-    log('error', 'create_invitation_failed', { reason: errorName(err) });
+    log('error', 'create_invitation_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR, values };
   }
 

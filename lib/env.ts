@@ -37,11 +37,19 @@ const schema = z
 
 export type Env = z.infer<typeof schema>;
 
+/** Eroare de configurare: mesajul contine doar numele variabilelor si mesajele zod, niciodata valorile. */
+export class EnvError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EnvError';
+  }
+}
+
 export function parseEnv(source: Record<string, string | undefined>): Env {
   const result = schema.safeParse(source);
   if (!result.success) {
     const problems = result.error.issues.map((i) => `${i.path.join('.')} (${i.message})`).join(', ');
-    throw new Error(`Variabile de mediu lipsa sau invalide: ${problems}`);
+    throw new EnvError(`Variabile de mediu lipsa sau invalide: ${problems}`);
   }
   return result.data;
 }

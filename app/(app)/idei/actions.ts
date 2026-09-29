@@ -6,7 +6,7 @@ import { getDb } from '@/lib/db/client';
 import { createIdea, deleteIdea } from '@/lib/ideas/service';
 import { ideaSchema } from '@/lib/validation';
 import { pickStrings, toFieldErrors } from '@/lib/form';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { GENERIC_ERROR, toActionState, type ActionState } from '@/lib/result';
 
 export async function createIdeaAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -18,7 +18,7 @@ export async function createIdeaAction(_prev: ActionState, formData: FormData): 
     const result = await createIdea(getDb(), actor, parsed.data, new Date());
     if (!result.ok) return { ok: false, error: result.error, fields: result.fields, values };
   } catch (err) {
-    log('error', 'create_idea_failed', { reason: errorName(err) });
+    log('error', 'create_idea_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR, values };
   }
   revalidatePath('/idei');
@@ -31,7 +31,7 @@ export async function deleteIdeaAction(ideaId: string, _prev: ActionState, _form
     const result = await deleteIdea(getDb(), actor, ideaId);
     if (!result.ok) return toActionState(result);
   } catch (err) {
-    log('error', 'delete_idea_failed', { reason: errorName(err) });
+    log('error', 'delete_idea_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR };
   }
   revalidatePath('/idei');

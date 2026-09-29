@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/require-session';
 import { getDb } from '@/lib/db/client';
 import { LIMITS } from '@/lib/domain';
 import { env } from '@/lib/env';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { vercelBlobStore } from '@/lib/photos/blob-store';
 import { addPhoto } from '@/lib/photos/service';
 import { parseDimension } from '@/lib/photos/validate';
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ id: result.value.id }, { status: 201 });
   } catch (err) {
-    log('error', 'upload_failed', { reason: errorName(err) });
+    log('error', 'upload_failed', errorInfo(err));
     return error('Incarcarea a esuat.', 500);
   }
 }

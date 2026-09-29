@@ -9,7 +9,7 @@ import { vercelBlobStore } from '@/lib/photos/blob-store';
 import { deletePhoto } from '@/lib/photos/service';
 import { memorySchema } from '@/lib/validation';
 import { pickStrings, toFieldErrors } from '@/lib/form';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { GENERIC_ERROR, toActionState, type ActionState } from '@/lib/result';
 
 export async function saveMemoryAction(invitationId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -21,7 +21,7 @@ export async function saveMemoryAction(invitationId: string, _prev: ActionState,
     const result = await saveMemory(getDb(), actor, invitationId, parsed.data, new Date());
     if (!result.ok) return { ok: false, error: result.error, fields: result.fields, values };
   } catch (err) {
-    log('error', 'save_memory_failed', { reason: errorName(err) });
+    log('error', 'save_memory_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR, values };
   }
   revalidatePath(`/invitatii/${invitationId}`);
@@ -39,7 +39,7 @@ export async function deletePhotoAction(
     const result = await deletePhoto(getDb(), vercelBlobStore(env().BLOB_READ_WRITE_TOKEN), actor, photoId);
     if (!result.ok) return toActionState(result);
   } catch (err) {
-    log('error', 'delete_photo_failed', { reason: errorName(err) });
+    log('error', 'delete_photo_failed', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR };
   }
   revalidatePath(`/invitatii/${invitationId}`);

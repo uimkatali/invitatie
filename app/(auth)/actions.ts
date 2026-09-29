@@ -10,7 +10,7 @@ import { signSession, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth
 import { hashIp, reserveAttempt, exceedsLimit, clearAttempts } from '@/lib/auth/rate-limit';
 import { clientIpFrom } from '@/lib/auth/client-ip';
 import { pickStrings } from '@/lib/form';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { GENERIC_ERROR, type ActionState } from '@/lib/result';
 
 const WRONG_CREDENTIALS = 'Utilizator sau parola gresite.';
@@ -56,7 +56,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 
     // Best-effort: daca stergerea esueaza, urmatorul login reusit o va relua: nu merita
     // sa transformam un login altfel reusit intr-o eroare pentru client.
-    await clearAttempts(db, ipHash).catch((err) => log('warn', 'login_clear_attempts_failed', { reason: errorName(err) }));
+    await clearAttempts(db, ipHash).catch((err) => log('warn', 'login_clear_attempts_failed', errorInfo(err)));
     const token = await signSession(user, e.SESSION_SECRET, now);
     (await cookies()).set(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -67,7 +67,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     });
     log('info', 'login_ok', { user });
   } catch (err) {
-    log('error', 'login_error', { reason: errorName(err) });
+    log('error', 'login_error', errorInfo(err));
     return { ok: false, error: GENERIC_ERROR, values: echo };
   }
 

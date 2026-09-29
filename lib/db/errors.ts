@@ -106,3 +106,32 @@ const DUPLICATE_KEY_MESSAGE = /duplicate entry/i;
 export function isDuplicateKey(err: unknown): boolean {
   return matches(err, DUPLICATE_KEY_CODES, DUPLICATE_KEY_MESSAGE);
 }
+
+// Errno-urile MySQL/TiDB au 3-5 cifre; codurile API-ului TiDB Cloud (ex. 61100002) au 8 si nu se raporteaza.
+const ERRNO_SHAPE = /^\d{3,5}$/;
+
+/**
+ * Errno-ul MySQL/TiDB gasit in lantul de cauze (din `code` / `details.code` sau din textul
+ * "Error 1062 (23000): ..." al driverului), sau null. Textul din wrapper-ul drizzle nu se citeste.
+ */
+export function dbErrorCode(err: unknown): string | null {
+  for (const code of collectFacts(err).codes) if (ERRNO_SHAPE.test(code)) return code;
+  return null;
+}
+
+const KIND_BY_ERRNO: Readonly<Record<string, string>> = {
+  '1045': 'access_denied',
+  '1049': 'unknown_database',
+  '1146': 'table_missing',
+  '1062': 'duplicate',
+  '9007': 'conflict',
+  '1213': 'conflict',
+  '1452': 'fk',
+};
+
+/** Eticheta scurta pentru log: un errno cunoscut, 'db_error' pentru oricare altul, null fara errno. */
+export function dbErrorKind(err: unknown): string | null {
+  const code = dbErrorCode(err);
+  if (code === null) return null;
+  return KIND_BY_ERRNO[code] ?? 'db_error';
+}

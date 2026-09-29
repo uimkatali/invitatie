@@ -1,6 +1,6 @@
 import { getSessionUser } from '@/lib/auth/require-session';
 import { getDb } from '@/lib/db/client';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { isTrustedBlobUrl } from '@/lib/photos/blob-store';
 import { getPhotoForViewing } from '@/lib/photos/service';
 
@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       },
     });
   } catch (err) {
-    log('error', 'photo_stream_failed', { reason: errorName(err) });
+    log('error', 'photo_stream_failed', errorInfo(err));
     return new Response(null, { status: 500 });
   }
 }

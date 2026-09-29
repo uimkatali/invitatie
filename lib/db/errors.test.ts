@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isForeignKeyViolation, isTxConflict, isDuplicateKey } from './errors';
+import { isForeignKeyViolation, isTxConflict, isDuplicateKey, dbErrorCode, dbErrorKind } from './errors';
 
 describe('isTxConflict', () => {
   it('recognizes a TiDB write-conflict DatabaseError (code 9007)', () => {
@@ -176,5 +176,44 @@ describe('user text inside the drizzle query wrapper is ignored', () => {
 
   it('only reads an errno at the start of a driver-level message', () => {
     expect(isTxConflict({ message: 'note mentions Error 9007 (x) in passing' })).toBe(false);
+  });
+});
+
+describe('dbErrorCode / dbErrorKind', () => {
+  it('reads the errno from the driver message through the drizzle wrapper', () => {
+    const err = drizzleWrapped("Error 1062 (23000): Duplicate entry 'x' for key 'k'");
+    expect(dbErrorCode(err)).toBe('1062');
+    expect(dbErrorKind(err)).toBe('duplicate');
+  });
+
+  it('reads an explicit code (string or number) but ignores the 8-digit TiDB Cloud API code', () => {
+    expect(dbErrorCode({ code: 1045 })).toBe('1045');
+    expect(dbErrorCode({ details: { code: '9007' } })).toBe('9007');
+    expect(dbErrorCode({ details: { code: 61100002 } })).toBeNull();
+    expect(dbErrorCode({ code: 'ECONNREFUSED' })).toBeNull();
+  });
+
+  it.each([
+    ['Error 1045 (28000): Access denied', 'access_denied'],
+    ['Error 1049 (42000): Unknown database', 'unknown_database'],
+    ['Error 1146 (42S02): Table missing', 'table_missing'],
+    ['Error 1062 (23000): Duplicate entry', 'duplicate'],
+    ['Error 9007 (HY000): Write conflict', 'conflict'],
+    ['Error 1213 (40001): deadlock', 'conflict'],
+    ['Error 1452 (23000): Cannot add', 'fk'],
+    ['Error 1064 (42000): syntax', 'db_error'],
+  ])('maps %j to %s', (message, kind) => {
+    expect(dbErrorKind(drizzleWrapped(message))).toBe(kind);
+  });
+
+  it('is null without an errno and never reads text inside the drizzle wrapper', async () => {
+    expect(dbErrorCode(new Error('boom'))).toBeNull();
+    expect(dbErrorKind(new TypeError('fetch failed'))).toBeNull();
+    expect(dbErrorKind(null)).toBeNull();
+    expect(dbErrorKind('nope')).toBeNull();
+    const { DrizzleQueryError } = await import('drizzle-orm/errors');
+    const hostile = new DrizzleQueryError('insert ...', ['Error 1045 (x'], new TypeError('fetch failed'));
+    expect(dbErrorCode(hostile)).toBeNull();
+    expect(dbErrorKind(hostile)).toBeNull();
   });
 });

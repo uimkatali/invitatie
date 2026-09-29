@@ -3,7 +3,7 @@ import type { InvitationStatus, NotificationType, UserId } from '../domain';
 import { env } from '../env';
 import { escapeHtml } from '../escape';
 import { appUrl } from '../app-url';
-import { log, errorName } from '../log';
+import { log, errorInfo } from '../log';
 import { displayName } from '../auth/display-names';
 import { describeNotification, notificationHref } from './describe';
 
@@ -56,6 +56,6 @@ export async function sendNotificationEmail(event: NotificationEvent): Promise<v
     });
     if (error) log('error', 'email_failed', { type: event.type, reason: error.name });
   } catch (err) {
-    log('error', 'email_failed', { type: event.type, reason: errorName(err) });
+    log('error', 'email_failed', { type: event.type, ...errorInfo(err) });
   }
 }

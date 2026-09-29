@@ -11,7 +11,7 @@ import type { InvitationAction } from '@/lib/invitations/state-machine';
 import { sendNotificationEmail } from '@/lib/notifications/email';
 import { respondSchema } from '@/lib/validation';
 import { pickStrings, toFieldErrors } from '@/lib/form';
-import { log, errorName } from '@/lib/log';
+import { log, errorInfo } from '@/lib/log';
 import { GENERIC_ERROR, toActionState, type ActionState } from '@/lib/result';
 import type { FlashKey } from './flash';
 import { echoResponseValues, type ResponseValues } from './response-values';
@@ -30,7 +30,7 @@ async function perform(
   try {
     result = await applyInvitationAction(getDb(), actor, invitationId, action, new Date(), note);
   } catch (err) {
-    log('error', 'invitation_action_failed', { action: action.type, reason: errorName(err) });
+    log('error', 'invitation_action_failed', { action: action.type, ...errorInfo(err) });
     return { ok: false, error: GENERIC_ERROR, ...(values && { values }) };
   }
   if (!result.ok) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseEnv } from './env';
+import { parseEnv, EnvError } from './env';
 
 const FAKE_HASH = '$2b$12$' + 'a'.repeat(53);
 const b64 = (s: string) => Buffer.from(s).toString('base64');
@@ -43,5 +43,25 @@ describe('parseEnv', () => {
 
   it('lists every missing variable', () => {
     expect(() => parseEnv({})).toThrow(new RegExp('DATABASE_URL.*SESSION_SECRET', 's'));
+  });
+});
+
+describe('EnvError', () => {
+  it('is thrown by parseEnv, names the variables and never echoes their values', () => {
+    const secretValue = 'super-secret-value-that-is-too-short';
+    let caught: unknown;
+    try {
+      parseEnv({ ...valid, SESSION_SECRET: 'short', DATABASE_URL: secretValue });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(EnvError);
+    const error = caught as EnvError;
+    expect(error.name).toBe('EnvError');
+    expect(error.message).toMatch(/^Variabile de mediu lipsa sau invalide: /);
+    expect(error.message).toMatch(/SESSION_SECRET/);
+    expect(error.message).toMatch(/DATABASE_URL/);
+    expect(error.message).not.toContain(secretValue);
+    expect(error.message).not.toContain('short)');
   });
 });
