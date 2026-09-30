@@ -1,0 +1,1 @@
+ALTER TABLE `notifications` ADD `invitation_status` enum('pending','accepted','declined','reschedule','cancelled');

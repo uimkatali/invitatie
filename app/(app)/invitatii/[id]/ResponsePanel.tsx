@@ -1,0 +1,87 @@
+'use client';
+
+import { useActionState, useState } from 'react';
+import Field from '@/components/ui/Field';
+import SubmitButton from '@/components/ui/SubmitButton';
+import { LIMITS } from '@/lib/domain';
+import type { ActionState } from '@/lib/result';
+import { triggerBurst } from '@/lib/scene/store';
+
+type Choice = 'accept' | 'decline' | 'reschedule';
+
+const OPTIONS: { value: Choice; label: string }[] = [
+  { value: 'accept', label: 'Da, abia astept' },
+  { value: 'decline', label: 'Nu pot de data asta' },
+  { value: 'reschedule', label: 'Propun alta ora' },
+];
+
+function isChoice(value: string | undefined): value is Choice {
+  return OPTIONS.some((option) => option.value === value);
+}
+
+interface ResponsePanelProps {
+  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  minDateTime: string;
+  maxDateTime: string;
+}
+
+export default function ResponsePanel({ action, minDateTime, maxDateTime }: ResponsePanelProps) {
+  const [state, formAction] = useActionState(action, null);
+  const failed = state && !state.ok ? state : null;
+  const submittedChoice = failed?.values?.action;
+  const [choice, setChoice] = useState<Choice>(isChoice(submittedChoice) ? submittedChoice : 'accept');
+
+  return (
+    <form
+      action={formAction}
+      className="card form response-panel"
+      onSubmit={() => {
+        if (choice === 'accept') triggerBurst();
+      }}
+    >
+      <h2>Raspunsul tau</h2>
+      <fieldset className="field">
+        <legend className="sr-only">Alege raspunsul</legend>
+        <div className="choice-grid">
+          {OPTIONS.map((option) => (
+            <label key={option.value} className="choice">
+              <input
+                type="radio"
+                name="action"
+                value={option.value}
+                defaultChecked={choice === option.value}
+                onChange={() => setChoice(option.value)}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {choice === 'reschedule' && (
+        <Field label="Ce ora ti-ar conveni?" htmlFor="proposedAt" error={failed?.fields?.proposedAt} hint="Ora Romaniei">
+          <input
+            id="proposedAt"
+            name="proposedAt"
+            type="datetime-local"
+            required
+            min={minDateTime}
+            max={maxDateTime}
+            defaultValue={failed?.values?.proposedAt ?? ''}
+          />
+        </Field>
+      )}
+
+      <Field label="Un mesaj (optional)" htmlFor="note" error={failed?.fields?.note}>
+        <textarea id="note" name="note" maxLength={LIMITS.responseNoteMax} defaultValue={failed?.values?.note ?? ''} />
+      </Field>
+
+      {failed && (
+        <p className="form-error" role="alert">
+          {failed.error}
+        </p>
+      )}
+      <SubmitButton label="Trimite raspunsul" />
+    </form>
+  );
+}

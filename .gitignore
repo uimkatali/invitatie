@@ -1,8 +1,13 @@
 node_modules/
 .next/
-email/invite-email.html
 .env*.local
+.env
+.env.*
+!.env*.example
 *.tsbuildinfo
 .vercel/
 .DS_Store
 Thumbs.db
+
+test-results/
+playwright-report/

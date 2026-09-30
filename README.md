@@ -1,68 +1,60 @@
-# Invitatie la date
+# Dateurile noastre
 
-Website + email pentru invitatia misterioasa, plus un formular unde ea alege ce isi doreste pentru urmatorul date.
+Manager de dateuri pentru doi: invitatii cu raspuns (Da / Nu / Propun alta ora), dashboard cu countdown, calendar, amintiri cu rating si poze private, idei comune, notificari. Fundal 3D cu frunze si fulgi pastel, iar destinatarul primeste invitatia ca o experienta care se deruleaza.
 
-## Arhitectura
+**Configurare de la zero, pas cu pas: vezi [SETUP.md](SETUP.md).**
 
-- **Next.js** (App Router). Textele site-ului (mesaje reveal, countdown, login) vin din `content.json`, editat direct de mana — nu exista baza de date pentru continut.
-- **Tema 3D activa** e singura stare partajata: o cheie (`activeTheme`) intr-un **Vercel Edge Config** store, citita de site-ul public la fiecare request si scrisa din pagina `/tema` (protejata cu parola ta, nu login real).
-- **Selectiile ei** (loc, ora, ce sa pregatim) se salveaza in `localStorage`-ul browser-ului ei cat timp completeaza formularul (draft, nu se pierde la refresh), apoi la apasarea butonului "Trimite" sunt trimise printr-un API route catre **Resend**, care iti trimite tie un email la `miu.catalinm@gmail.com`.
+## Stack
 
-## Development
+Next.js 16 (App Router, Server Actions) · TiDB Cloud (Drizzle, driver HTTP) · Gmail SMTP (nodemailer) · Vercel Blob (store privat) · three.js / React Three Fiber · Vitest · Playwright
+
+## Pagini
+
+| Ruta | Ce este |
+|---|---|
+| `/login` | singura pagina publica; doi useri fixi |
+| `/` | dashboard: urmatorul date cu countdown, invitatii care asteapta raspuns |
+| `/invitatii/noua` | formular de invitatie (optional pornita dintr-o idee: `?idee=<id>`) |
+| `/invitatii/[id]` | destinatarul vede experienta si raspunde; ceilalti vad rezumatul, actiunile creatorului si amintirile |
+| `/calendar` | calendar lunar (`?luna=YYYY-MM`) |
+| `/idei` | idei comune de dateuri |
+| `/notificari` | notificarile din aplicatie |
+| `/api/blob-upload` | incarcare poze (sesiune, acelasi origin, maxim 4 MB, doar JPEG / PNG / WebP) |
+| `/api/photos/[id]` | serveste o poza doar dupa verificarea sesiunii |
+
+## Comenzi
 
 ```bash
-npm install
-npm run dev    # site public la http://localhost:3000, tema la http://localhost:3000/tema
-npm test       # ruleaza testele
-npm run build  # build de productie
+npm run dev            # aplicatia local, http://localhost:3000
+npm run build          # build de productie
+npm run start          # porneste build-ul de productie
+npm run typecheck      # tsc --noEmit
+npm test               # teste unitare + integrare (Vitest; integrarea foloseste baza dates_test)
+npm run verify         # typecheck + teste + npm audit --audit-level=high
+npm run test:e2e       # teste in browser (flux + securitate), ~2 min, port 3100, baza dates_test
+npm run db:generate    # genereaza o migrare dupa ce modifici lib/db/schema.ts
+npm run db:migrate     # aplica migrarile pe baza din DATABASE_URL
+npm run hash-password  # hash pentru o parola noua (PowerShell / cmd; in Git Bash: winpty)
+npm run gen-secret     # SESSION_SECRET nou
+npm run check:email    # trimite un email de proba la adresele din .env.local (Gmail SMTP)
+npm run check:blob     # verifica store-ul Vercel Blob din .env.local: privat, citire autentificata, stergere
 ```
 
-## Setup initial (o singura data)
+Testele E2E cer o data `npx playwright install chromium`. Detalii si variabilele de mediu: [SETUP.md](SETUP.md).
 
-### 1. Resend (pentru emailul cu selectiile ei)
+## Structura
 
-Creeaza un cont gratuit pe [resend.com](https://resend.com) si genereaza un API key.
+- `app/`: pagini si Server Actions (subtiri: validare + apel de serviciu)
+- `lib/`: logica. Serviciile primesc `db` si `now`, deci sunt testate pe o baza TiDB separata (`dates_test`)
+- `lib/invitations/state-machine.ts`: singura sursa de adevar pentru ce se poate face cu o invitatie
+- `lib/env.ts`: variabilele de mediu, validate la prima utilizare (nu la build: `npm run build` merge si fara ele; o variabila lipsa da `EnvError` la prima cerere care o foloseste, vizibil in Logs)
+- `components/`: componente comune; `components/scene/` + `lib/scene/`: scena 3D (matematica in functii pure, testate)
+- `proxy.ts`: CSP cu nonce si blocarea rutelor fara sesiune
+- `drizzle/`: migrarile SQL; `test/`: helperi si fixtures pentru teste
+- `e2e/`: testele Playwright (`flow.spec.ts`, `security.spec.ts`); `playwright.config.ts` le porneste pe un build de productie
+- `scripts/`: `hash-password` si `gen-secret`
+- `vercel.json`: regiunea functiilor (`fra1`); `.github/dependabot.yml`: update-uri de dependente
 
-### 2. Vercel Edge Config (pentru tema live)
+## Securitate
 
-1. Din dashboard-ul proiectului pe [vercel.com](https://vercel.com), Storage -> Create -> Edge Config. Conecteaza-l la acest proiect — asta injecteaza automat variabila `EDGE_CONFIG` (citirea temei foloseste asta, nu trebuie copiata de mana).
-2. Noteaza ID-ul Edge Config-ului (vizibil in URL-ul paginii lui din dashboard, sau in Settings ale store-ului) — asta e `EDGE_CONFIG_ID`.
-3. Genereaza un token personal Vercel: Account Settings -> Tokens -> Create Token. Asta e `VERCEL_API_TOKEN` — e folosit doar de pagina `/tema` ca sa poata scrie in Edge Config (citirea publica nu are nevoie de el).
-
-### 3. Variabile de mediu
-
-Copiaza `.env.local.example` in `.env.local` si completeaza:
-
-| Variabila | De unde vine |
-|---|---|
-| `RESEND_API_KEY` | din contul Resend creat mai sus |
-| `EDGE_CONFIG` | generata automat cand conectezi Edge Config la proiect (Vercel) — local, copiaz-o din Project Settings -> Environment Variables dupa ce ai conectat store-ul |
-| `EDGE_CONFIG_ID` | ID-ul store-ului, din dashboard |
-| `VERCEL_API_TOKEN` | tokenul personal creat mai sus |
-
-Seteaza aceleasi variabile si in Vercel (Project Settings -> Environment Variables) inainte de deploy, nu doar local.
-
-### 4. Parola paginii de tema
-
-In `content.json`, sub `themeLogin`, schimba `expectedPassword` (si `expectedUsername` daca vrei) din valoarea placeholder pusa initial.
-
-## Login-ul destinatarei
-
-Ecranul de login public (cel pe care il vede persoana invitata) foloseste `login.expectedUsername`/`expectedPassword` din `content.json`, implicit `fatamisterioasa` / `elefant123`. **Nu e securitate reala** — codul e vizibil oricui deschide devtools in browser, tine doar lumea din intamplare departe de link.
-
-Pagina `/tema` foloseste acelasi mecanism (nu e securitate reala), cu `themeLogin` in `content.json` — e doar ca tu sa nu trebuiasca sa umbli in cod ca sa schimbi tema cand te plictisesti de ea.
-
-## Fallback offline (optional)
-
-`npm run build:email` regenereaza `email/invite-email.html` din `content.json`, la fel ca inainte — util daca vrei sa generezi manual emailul de invitatie initial fara sa treci prin niciun API.
-
-## Deploy (Vercel prin GitHub)
-
-1. Creeaza un repo nou pe GitHub (gol, fara README).
-2. Din acest folder:
-   ```bash
-   git remote add origin <url-ul-repo-ului-tau>
-   git branch -M main
-   git push -u origin main
-   ```
-3. Pe [vercel.com](https://vercel.com), "Add New Project" -> importa repo-ul din GitHub -> conecteaza Edge Config (daca nu e deja) -> seteaza variabilele de mediu din sectiunea de mai sus -> Deploy.
+Doi useri fixi din env (parole bcrypt), sesiune JWT in cookie `httpOnly` / `SameSite=Lax` / `Secure` in productie, rate limit la login (5 incercari per 15 minute), CSP strict cu nonce, poze intr-un store Vercel Blob privat, servite doar prin server dupa verificarea sesiunii (cu CSP propriu `default-src 'none'; sandbox`), upload cu verificare de origin, dimensiune si continut. Secretele traiesc doar in `.env.local` / `.env.test.local` (ignorate de git). Detalii si verificari inainte de deploy: [docs/security-checklist.md](docs/security-checklist.md).
