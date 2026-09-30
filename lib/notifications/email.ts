@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import type { InvitationStatus, NotificationType, UserId } from '../domain';
 import { env } from '../env';
 import { escapeHtml } from '../escape';
@@ -6,6 +6,7 @@ import { appUrl } from '../app-url';
 import { log, errorInfo } from '../log';
 import { displayName } from '../auth/display-names';
 import { describeNotification, notificationHref } from './describe';
+import { gmailSmtpOptions, smtpErrorCode } from './smtp.mjs';
 
 export interface NotificationEvent {
   recipient: UserId;
@@ -18,9 +19,12 @@ export interface NotificationEvent {
 
 const EMAIL_TYPES = new Set<NotificationType>(['invite_new', 'invite_response', 'reschedule_accepted', 'invite_cancelled']);
 
-/** Resend e in sandbox: poate trimite doar la adresa contului (EMAIL_EL). */
-export function shouldEmail(event: NotificationEvent): boolean {
-  return event.recipient === 'el' && EMAIL_TYPES.has(event.type);
+/** Adresa de email a fiecarui utilizator (EMAIL_EL / EMAIL_EA); null sau gol = acel utilizator nu primeste email. */
+export type Recipients = Record<UserId, string | null>;
+
+/** Ambii parteneri primesc email pentru evenimentele de invitatie, daca au o adresa configurata. */
+export function shouldEmail(event: NotificationEvent, recipients: Recipients): boolean {
+  return EMAIL_TYPES.has(event.type) && Boolean(recipients[event.recipient]);
 }
 
 // Orice caracter de control (inclusiv \r\n\t), NEL (U+0085) sau separatorii Unicode de
@@ -41,21 +45,57 @@ export function buildNotificationEmail(event: NotificationEvent, actorName: stri
   return { subject: oneLine, html, text: `${oneLine}\n\n${link}` };
 }
 
-/** Nu arunca niciodata: esecul emailului nu trebuie sa strice actiunea. */
-export async function sendNotificationEmail(event: NotificationEvent): Promise<void> {
-  if (!shouldEmail(event)) return;
+export interface MailMessage {
+  from: { name: string; address: string };
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}
+
+/** Partea din nodemailer de care avem nevoie (injectabila in teste). */
+export interface MailTransport {
+  sendMail(message: MailMessage): Promise<unknown>;
+}
+
+export type TransportFactory = (options: ReturnType<typeof gmailSmtpOptions>) => MailTransport;
+
+const gmailTransport: TransportFactory = (options) => nodemailer.createTransport(options);
+
+// Lipsa configuratiei nu e o eroare: emailurile sunt doar dezactivate. Logam o singura data pe proces.
+let loggedDisabled = false;
+
+/**
+ * Nu arunca niciodata: esecul emailului nu trebuie sa strice actiunea. Nu logheaza adrese, parola sau
+ * continutul mesajului, doar tipul evenimentului si un cod scurt (EAUTH, ECONNECTION...).
+ */
+export async function sendNotificationEmail(
+  event: NotificationEvent,
+  createTransport: TransportFactory = gmailTransport,
+): Promise<void> {
   try {
     const e = env();
+    if (!EMAIL_TYPES.has(event.type)) return;
+    if (!e.GMAIL_USER || !e.GMAIL_APP_PASSWORD) {
+      if (!loggedDisabled) {
+        loggedDisabled = true;
+        log('warn', 'email_disabled');
+      }
+      return;
+    }
+    const to = event.recipient === 'el' ? e.EMAIL_EL : e.EMAIL_EA;
+    if (!shouldEmail(event, { el: e.EMAIL_EL, ea: e.EMAIL_EA }) || !to) return;
+
     const email = buildNotificationEmail(event, displayName(event.actor), appUrl());
-    const { error } = await new Resend(e.RESEND_API_KEY).emails.send({
-      from: 'Dateurile noastre <onboarding@resend.dev>',
-      to: e.EMAIL_EL,
+    await createTransport(gmailSmtpOptions(e.GMAIL_USER, e.GMAIL_APP_PASSWORD)).sendMail({
+      from: { name: 'Dateurile noastre', address: e.GMAIL_USER },
+      to,
       subject: email.subject,
       html: email.html,
       text: email.text,
     });
-    if (error) log('error', 'email_failed', { type: event.type, reason: error.name });
   } catch (err) {
-    log('error', 'email_failed', { type: event.type, ...errorInfo(err) });
+    const code = smtpErrorCode(err);
+    log('error', 'email_failed', { type: event.type, ...errorInfo(err), ...(code && { smtpCode: code }) });
   }
 }

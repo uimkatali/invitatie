@@ -12,6 +12,21 @@ const bcryptHashBase64 = z.string().min(1).transform((value, ctx) => {
   return decoded;
 });
 
+/** Adresa optionala: lipsa sau gol inseamna "dezactivat" (null); o valoare prezenta trebuie sa fie email valid. */
+const optionalEmail = z
+  .union([z.literal(''), z.email()])
+  .optional()
+  .transform((v) => (v ? v : null));
+
+/** Parola de aplicatie Google e afisata in grupuri de cate 4 (cu spatii): toate spatiile se scot. */
+const optionalAppPassword = z
+  .string()
+  .optional()
+  .transform((v) => {
+    const compact = (v ?? '').replace(/\s+/g, '');
+    return compact === '' ? null : compact;
+  });
+
 const schema = z
   .object({
     DATABASE_URL: z.string().startsWith('mysql://'),
@@ -20,12 +35,12 @@ const schema = z
     USER_EL_PASSWORD_HASH: bcryptHashBase64,
     USER_EA_NAME: z.string().trim().min(1).max(100),
     USER_EA_PASSWORD_HASH: bcryptHashBase64,
-    EMAIL_EL: z.email(),
-    EMAIL_EA: z
-      .union([z.literal(''), z.email()])
-      .optional()
-      .transform((v) => (v ? v : null)),
-    RESEND_API_KEY: z.string().min(1),
+    // Emailurile de notificare (Gmail SMTP): fara GMAIL_USER + GMAIL_APP_PASSWORD sunt dezactivate, iar fara
+    // adresa unui utilizator acela nu primeste email. Aplicatia merge in toate cazurile.
+    GMAIL_USER: optionalEmail,
+    GMAIL_APP_PASSWORD: optionalAppPassword,
+    EMAIL_EL: optionalEmail,
+    EMAIL_EA: optionalEmail,
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
   })
   .superRefine((env, ctx) => {

@@ -13,7 +13,8 @@ const valid = {
   USER_EA_PASSWORD_HASH: b64(FAKE_HASH),
   EMAIL_EL: 'el@example.com',
   EMAIL_EA: '',
-  RESEND_API_KEY: 're_123',
+  GMAIL_USER: 'sender@gmail.com',
+  GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop',
   BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_123',
 };
 
@@ -22,6 +23,38 @@ describe('parseEnv', () => {
     const env = parseEnv(valid);
     expect(env.USER_EL_PASSWORD_HASH).toBe(FAKE_HASH);
     expect(env.EMAIL_EA).toBeNull();
+  });
+
+  it('strips all whitespace from the Gmail app password (Google shows it in groups of four)', () => {
+    expect(parseEnv(valid).GMAIL_APP_PASSWORD).toBe('abcdefghijklmnop');
+    const messy = ['  abcd', 'efgh ijkl mnop '].join(String.fromCharCode(9)) + String.fromCharCode(10);
+    expect(parseEnv({ ...valid, GMAIL_APP_PASSWORD: messy }).GMAIL_APP_PASSWORD).toBe('abcdefghijklmnop');
+  });
+
+  it('treats missing or empty email settings as disabled (null), not as an error', () => {
+    const { GMAIL_USER: _u, GMAIL_APP_PASSWORD: _p, EMAIL_EL: _l, ...rest } = valid;
+    void [_u, _p, _l];
+    const env = parseEnv({ ...rest, EMAIL_EA: '', GMAIL_USER: '', GMAIL_APP_PASSWORD: '   ' });
+    expect(env.GMAIL_USER).toBeNull();
+    expect(env.GMAIL_APP_PASSWORD).toBeNull();
+    expect(env.EMAIL_EL).toBeNull();
+    expect(env.EMAIL_EA).toBeNull();
+  });
+
+  it('accepts addresses for both partners', () => {
+    const env = parseEnv({ ...valid, EMAIL_EL: 'el@example.com', EMAIL_EA: 'ea@example.com' });
+    expect(env.EMAIL_EL).toBe('el@example.com');
+    expect(env.EMAIL_EA).toBe('ea@example.com');
+  });
+
+  it('rejects a malformed address and names the variable without echoing it', () => {
+    expect(() => parseEnv({ ...valid, EMAIL_EA: 'not-an-email' })).toThrow(/EMAIL_EA/);
+    expect(() => parseEnv({ ...valid, GMAIL_USER: 'nope' })).toThrow(/GMAIL_USER/);
+    expect(() => parseEnv({ ...valid, EMAIL_EL: 'secret-not-email' })).not.toThrow(/secret-not-email/);
+  });
+
+  it('needs no email provider key besides the optional Gmail settings', () => {
+    expect(() => parseEnv(valid)).not.toThrow();
   });
 
   it('rejects a short session secret and names the variable', () => {

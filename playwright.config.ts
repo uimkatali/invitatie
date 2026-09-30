@@ -50,9 +50,10 @@ export default defineConfig({
       USER_EA_NAME: E2E_USERS.ea.name,
       USER_EA_PASSWORD_HASH: hash(E2E_USERS.ea.password),
       EMAIL_EL: 'el@example.com',
-      EMAIL_EA: '',
-      // Cheie invalida intentionat: emailul esueaza, e logat, iar actiunea merge mai departe.
-      RESEND_API_KEY: 're_e2e_invalid',
+      EMAIL_EA: 'ea@example.com',
+      // Gmail ramane dezactivat in E2E (goale chiar daca dezvoltatorul le are in mediu): emailurile sunt sarite.
+      GMAIL_USER: '',
+      GMAIL_APP_PASSWORD: '',
       BLOB_READ_WRITE_TOKEN: process.env.E2E_BLOB_READ_WRITE_TOKEN ?? 'e2e-no-blob',
       APP_URL: `http://localhost:${PORT}`,
     },
