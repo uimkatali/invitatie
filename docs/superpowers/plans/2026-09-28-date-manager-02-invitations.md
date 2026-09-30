@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Nota (actualizare ulterioara):** stratul de email din acest plan (Resend) a fost inlocuit cu Gmail SMTP prin `nodemailer`, pentru ca sandbox-ul Resend trimite doar la proprietarul contului. Codul din repo (`lib/notifications/email.ts`, `lib/env.ts`, `SETUP.md`) este sursa de adevar; blocurile de cod despre email de mai jos sunt istorice si nu se mai aplica. Vezi abaterea 10 din `2026-09-28-date-manager-00-overview.md`.
+
 **Goal:** Fluxul complet de invitatii: creare, raspuns (Da / Nu / Propun alta ora), acceptarea orei propuse, anulare, dashboard grupat, notificari in aplicatie cu badge si email catre "el".
 
 **Architecture:** Logica de tranzitii e o functie pura (`transition`) folosita si de server (validare), si de UI (`canPerform`, ce butoane apar). Serviciile (`lib/invitations/service.ts`) primesc `db` si `now`, fac mutatia + notificarea intr-o tranzactie si intorc un `NotificationEvent`; Server Actions trimit emailul dupa raspuns cu `after()`.
 
-**Tech Stack:** Next.js 16 Server Actions + `after`, Drizzle, zod 4, Resend, Vitest.
+**Tech Stack:** Next.js 16 Server Actions + `after`, Drizzle, zod 4, nodemailer (Gmail SMTP), Vitest.
 
 **Prerequisite:** Faza 1 terminata. Spec sectiunile 6, 7, 8, 11. Abaterile: `2026-09-28-date-manager-00-overview.md`.
 

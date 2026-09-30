@@ -13,7 +13,7 @@ Aplicatia veche (invitatie misterioasa unidirectionala + formular de selectii) s
 3. Amintiri dupa date: nota + rating 1-5 + poze, cate una per user per date
 4. Poze pe amintiri (Vercel Blob, servite doar prin server dupa verificarea sesiunii)
 5. Lista de idei, transformabila in invitatie
-6. Notificari in aplicatie (badge) + email prin Resend doar catre "el"
+6. Notificari in aplicatie (badge) + email catre ambii parteneri prin Gmail SMTP
 7. Calendar lunar cu dateurile marcate
 8. Fundal 3D ambient + experienta 3D scroll-driven la deschiderea invitatiei
 9. Hardening OWASP Top 10 (2025) si teste de securitate
@@ -23,7 +23,6 @@ Aplicatia veche (invitatie misterioasa unidirectionala + formular de selectii) s
 - Inregistrare, reset parola, 2FA, mai mult de 2 useri
 - Contra-propunere la reschedule (creatorul doar accepta ora propusa sau anuleaza)
 - Editarea unei invitatii dupa trimitere (se anuleaza si se creeaza alta)
-- Email catre "ea" (Resend sandbox; se activeaza cand exista domeniu verificat, `EMAIL_EA` e deja pregatit)
 
 ## 2. Ce se sterge si ce se pastreaza
 
@@ -43,7 +42,7 @@ Istoricul ramane in git.
 | ORM / driver | Drizzle ORM cu `drizzle-orm/tidb-serverless` + `@tidbcloud/serverless` (HTTP, fara pool); `drizzle-kit` + `mysql2` doar ca devDependencies pentru migrari |
 | Validare | `zod` |
 | Auth | `bcryptjs` + `jose` (JWT HS256 in cookie) |
-| Email | Resend (sandbox) |
+| Email | Gmail SMTP (`nodemailer`, `smtp.gmail.com:465`, parola de aplicatie Google) |
 | Fisiere | Vercel Blob, store privat (`put` / `get` / `del` cu `access: 'private'`) |
 | 3D | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing` |
 | Fonturi | `next/font`: Fraunces (titluri), Inter (text) |
@@ -70,9 +69,10 @@ USER_EL_NAME=
 USER_EL_PASSWORD_HASH=
 USER_EA_NAME=
 USER_EA_PASSWORD_HASH=
-EMAIL_EL=
-EMAIL_EA=                # optional, nefolosit in v1 (Resend sandbox)
-RESEND_API_KEY=
+GMAIL_USER=              # optional: contul Gmail care trimite notificarile
+GMAIL_APP_PASSWORD=      # optional: parola de aplicatie Google (16 caractere, spatiile se ignora)
+EMAIL_EL=                # optional: adresa lui
+EMAIL_EA=                # optional: adresa ei
 BLOB_READ_WRITE_TOKEN=   # tokenul store-ului Blob PRIVAT (Vercel il adauga la conectarea store-ului; local se copiaza in .env.local)
 TEST_DATABASE_URL=       # optional, doar pentru testele de integrare si E2E (baza dates_test), in .env.test.local
 APP_URL=                 # optional, baza linkurilor din emailuri; altfel VERCEL_PROJECT_PRODUCTION_URL, altfel http://localhost:3000
@@ -221,7 +221,7 @@ Fiecare mutatie relevanta insereaza, in aceeasi tranzactie, o notificare pentru 
 | amintire salvata prima data | `memory_added` |
 | idee adaugata | `idea_added` |
 
-Email: dupa commit, daca destinatarul notificarii e `el` si tipul e `invite_new`, `invite_response`, `reschedule_accepted` sau `invite_cancelled`, se trimite email prin Resend catre `EMAIL_EL` (`from: onboarding@resend.dev`). Continutul: titlul invitatiei, actiunea, link catre invitatie; toate valorile escape-uite. Esecul emailului se logheaza si nu afecteaza actiunea.
+Email: dupa commit, pentru tipurile `invite_new`, `invite_response`, `reschedule_accepted` sau `invite_cancelled`, destinatarul notificarii (oricare dintre cei doi) primeste un email la adresa lui (`EMAIL_EL` / `EMAIL_EA`), trimis prin Gmail SMTP (`nodemailer`, port 465, `from: "Dateurile noastre" <GMAIL_USER>`). Fara `GMAIL_USER` + `GMAIL_APP_PASSWORD` emailurile sunt dezactivate (se logheaza o data `email_disabled`), iar un utilizator fara adresa nu primeste email. Continutul: titlul invitatiei, actiunea, link catre invitatie; toate valorile escape-uite, subiectul pe un singur rand. Esecul emailului se logheaza (doar tipul si un cod scurt precum `EAUTH`, fara adrese, parola sau continut) si nu afecteaza actiunea.
 
 ## 9. 3D si vizual
 
@@ -304,7 +304,7 @@ Un URL de blob privat (`https://<store>.private.blob.vercel-storage.com/...`) nu
 ## 13. Ghid de configurare (`SETUP.md`)
 
 Scris pentru cineva fara experienta, cu fiecare click si fiecare comanda:
-1. Conturi: GitHub, Vercel, TiDB Cloud, Resend
+1. Conturi: GitHub, Vercel, TiDB Cloud, un cont Google pentru Gmail SMTP
 2. TiDB Cloud: cluster Starter in AWS Frankfurt (eu-central-1), baza `dates` (si `dates_test` optional), copierea connection string-ului
 3. Local: `.env.local` din `.env.local.example`, generarea `SESSION_SECRET` cu o comanda, `npm run hash-password` pentru fiecare user
 4. `npm install`, `npm run db:migrate`, `npm run dev`, primul login

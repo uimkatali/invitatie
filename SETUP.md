@@ -12,7 +12,7 @@ Timp estimat: 45-60 de minute prima data.
 
 - **Node.js 22**. Verifica in terminal: `node -v` trebuie sa arate `v22...`. Daca nu il ai: https://nodejs.org -> descarca versiunea LTS 22 -> instaleaza cu Next, Next, Finish (dupa instalare inchide si redeschide terminalul).
 - **Git**. Verifica: `git --version`.
-- Conturi (toate gratuite): **GitHub**, **Vercel**, **TiDB Cloud**, **Resend**.
+- Conturi (toate gratuite): **GitHub**, **Vercel**, **TiDB Cloud**, un cont **Google** (Gmail) pentru emailuri.
 
 ### 0.2 Cum deschizi terminalul in folderul proiectului
 
@@ -44,7 +44,7 @@ Parolele, cheile si connection string-urile sunt **secrete**. Regulile:
    git status
    ```
    Lista **nu trebuie** sa contina `.env.local`, `.env.test.local` si nici `.env.local.example` ca `modified`. Daca vezi `.env.local.example` modificat, ai scris secrete in el: muta valorile in `.env.local`, apoi ruleaza `git restore .env.local.example` ca sa-l readuci gol.
-4. Nu trimite secrete in chat, email sau capturi de ecran (nici mie, nici altcuiva): parole, `DATABASE_URL`, `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `SESSION_SECRET`, hash-urile de parola. Daca ai trimis din greseala o valoare, considera-o compromisa: genereaza-o din nou (parola TiDB, cheia Resend, tokenul Blob, `npm run gen-secret`) si inlocuieste-o.
+4. Nu trimite secrete in chat, email sau capturi de ecran (nici mie, nici altcuiva): parole, `DATABASE_URL`, `GMAIL_APP_PASSWORD`, `BLOB_READ_WRITE_TOKEN`, `SESSION_SECRET`, hash-urile de parola. Daca ai trimis din greseala o valoare, considera-o compromisa: genereaza-o din nou (parola TiDB, parola de aplicatie Google, tokenul Blob, `npm run gen-secret`) si inlocuieste-o.
 
 ---
 
@@ -98,15 +98,70 @@ Primul e `DATABASE_URL`, al doilea e `TEST_DATABASE_URL`. Se scriu **exact** asa
 
 ---
 
-## 2. Emailuri (Resend)
+## 2. Emailuri prin Gmail
 
-1. Intra pe https://resend.com cu contul existent.
-2. Meniul din stanga -> **API Keys** -> **Create API Key**.
-3. **Name**: `dateuri`. **Permission**: `Sending access`. Apasa **Add**.
-4. **Copiaza cheia** (incepe cu `re_`): se afiseaza o singura data. Asta e `RESEND_API_KEY`.
-5. `EMAIL_EL` = adresa de email cu care e facut contul Resend (vezi Settings -> Team sau coltul din dreapta-sus).
+Aplicatia trimite un email fiecaruia dintre voi cand se intampla ceva cu o invitatie (invitatie noua, raspuns, ora propusa acceptata, anulare). Emailurile pleaca de pe un cont Gmail de-al vostru (oricare dintre cele doua, sau unul separat) si ajung la adresele pe care le alegi. Totul e gratuit si nu ai nevoie de domeniu propriu.
 
-> De ce doar la tine: fara un domeniu verificat, Resend trimite emailuri doar la adresa contului (expeditorul e `onboarding@resend.dev`, modul "sandbox"). Emailurile ajung deci numai la `EMAIL_EL`. Ea vede toate notificarile in aplicatie (badge-ul de la "Notificari"). Daca verifici mai tarziu un domeniu in Resend (Domains -> Add Domain), completeaza `EMAIL_EA` si cere o mica modificare in `lib/notifications/email.ts`.
+Aplicatia merge si fara emailuri: daca sari peste aceasta sectiune, notificarile apar doar in aplicatie (badge-ul de la "Notificari"). Poti reveni oricand.
+
+### 2.1 Contul Google care trimite emailurile
+
+1. Alege contul Gmail de pe care vor pleca emailurile. Adresa lui va fi `GMAIL_USER`. Emailurile vor aparea ca trimise de "Dateurile noastre" de la aceasta adresa.
+2. Deschide https://myaccount.google.com si logheaza-te cu acel cont.
+
+### 2.2 Verificarea in 2 pasi (obligatorie pentru parola de aplicatie)
+
+1. In https://myaccount.google.com apasa in stanga **Security** (Securitate).
+2. La sectiunea "How you sign in to Google" apasa **2-Step Verification** (Verificarea in 2 pasi).
+3. Apasa **Get started** si urmeaza pasii (de obicei confirmi cu telefonul). Cand ai terminat, verificarea in 2 pasi apare ca **On**.
+
+### 2.3 Parola de aplicatie
+
+Aceasta e o parola speciala, separata de parola contului, pe care o foloseste doar aplicatia. Poate fi stearsa oricand fara sa-ti schimbi parola Google.
+
+1. Deschide https://myaccount.google.com/apppasswords (daca nu se deschide, verificarea in 2 pasi de la 2.2 nu e activa).
+2. La **App name** scrie `dateuri` si apasa **Create**.
+3. Google arata un cod de **16 litere**, in patru grupuri (`abcd efgh ijkl mnop`). **Copiaza-l acum**: se afiseaza o singura data. Daca il pierzi, stergi parola `dateuri` de pe aceeasi pagina si creezi alta.
+4. Asta e `GMAIL_APP_PASSWORD`. Poti sa-l lipesti cu tot cu spatii, aplicatia le ignora.
+
+### 2.4 Completeaza `.env.local`
+
+Deschide `.env.local` (`notepad .env.local`, pasul 4.2) si completeaza, fara ghilimele:
+
+| Variabila | Ce pui |
+|---|---|
+| `GMAIL_USER` | adresa Gmail de la 2.1 (ex. `numele.tau@gmail.com`) |
+| `GMAIL_APP_PASSWORD` | codul de 16 caractere de la 2.3 |
+| `EMAIL_EL` | adresa ta, unde primesti notificarile (poate fi aceeasi cu `GMAIL_USER`) |
+| `EMAIL_EA` | adresa ei, unde primeste notificarile ea |
+
+`EMAIL_EL` si `EMAIL_EA` sunt independente: daca lasi una goala, acel utilizator nu primeste emailuri. Aceleasi patru variabile le pui si in Vercel (pasul 5).
+
+### 2.5 Verifica
+
+In PowerShell, in folderul proiectului (pasul 0.2):
+```bash
+npm run check:email
+```
+Trimite un email scurt de proba la fiecare adresa configurata si afiseaza rezultatul fara sa arate parola sau adresele intregi. Rezultat corect:
+```
+Trimit un email de proba de la n***@gmail.com (nu se afiseaza parola sau adresele intregi)...
+
+PASS  EMAIL_EL (n***@gmail.com): email trimis, verifica inbox-ul (si Spam)
+PASS  EMAIL_EA (e***@gmail.com): email trimis, verifica inbox-ul (si Spam)
+
+REZULTAT: PASS. Emailurile pornesc. Verifica si in Spam daca nu apar in inbox.
+```
+Deschide apoi inbox-ul fiecarei adrese: trebuie sa fie emailul "Test notificari Dateurile noastre".
+
+Daca vezi **FAIL**: `EAUTH` inseamna parola de aplicatie gresita sau verificarea in 2 pasi inactiva (refa 2.2 si 2.3); `ECONNECTION` / `ETIMEDOUT` inseamna ca nu se poate conecta la `smtp.gmail.com` (internet sau port 465 blocat, de exemplu de firewall sau retea de firma). Alte cazuri: sectiunea 9.
+
+### 2.6 Bine de stiut
+
+- **Spam:** primul email poate ajunge in Spam. Deschide-l si apasa **Not spam** (Nu e spam) ca urmatoarele sa ajunga in inbox.
+- **Limite:** Gmail permite sute de emailuri pe zi, cu mult peste cat trimiteti voi doi.
+- **Parola de aplicatie e un secret:** nu o pune in `.env.local.example`, nu o scrie in chat si nu o publica. Daca a ajuns undeva unde nu trebuia, o stergi imediat de pe https://myaccount.google.com/apppasswords (butonul de stergere de langa `dateuri`) si creezi alta.
+- **Expeditorul** este adresa `GMAIL_USER`. Raspunsurile la email ajung in acea casuta; aplicatia nu citeste emailuri.
 
 ---
 
@@ -188,9 +243,10 @@ Deschide-l ca sa-l editezi: `notepad .env.local` (se deschide in Notepad; salvea
 | `USER_EL_PASSWORD_HASH` | rezultatul `npm run hash-password` (vezi mai jos) |
 | `USER_EA_NAME` | username-ul ei (ex. un nume de alint); trebuie sa difere de al tau |
 | `USER_EA_PASSWORD_HASH` | rezultatul `npm run hash-password` pentru parola ei |
-| `EMAIL_EL` | de la pasul 2 |
-| `EMAIL_EA` | lasa gol |
-| `RESEND_API_KEY` | de la pasul 2 |
+| `GMAIL_USER` | de la pasul 2 (optional: fara el nu se trimit emailuri) |
+| `GMAIL_APP_PASSWORD` | de la pasul 2 (optional) |
+| `EMAIL_EL` | adresa ta, de la pasul 2 (optional) |
+| `EMAIL_EA` | adresa ei, de la pasul 2 (optional) |
 | `BLOB_READ_WRITE_TOKEN` | de la pasul 3.1, store-ul PRIVAT (sau o valoare provizorie, pana il ai) |
 | `APP_URL` | lasa gol local |
 
@@ -294,10 +350,9 @@ Proiect -> **Settings** -> **Environment Variables**. Pentru fiecare rand de mai
 | `SESSION_SECRET` | **unul nou**: ruleaza iar `npm run gen-secret` | da |
 | `USER_EL_NAME`, `USER_EL_PASSWORD_HASH` | la fel ca local | da |
 | `USER_EA_NAME`, `USER_EA_PASSWORD_HASH` | la fel ca local | da |
-| `EMAIL_EL` | la fel ca local | da |
-| `RESEND_API_KEY` | la fel ca local | da |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | la fel ca local (emailurile sunt dezactivate daca lipsesc) | nu |
+| `EMAIL_EL`, `EMAIL_EA` | la fel ca local (cine nu are adresa nu primeste emailuri) | nu |
 | `BLOB_READ_WRITE_TOKEN` | exista deja, pus de Vercel la pasul 3.1 | da |
-| `EMAIL_EA` | lasa necompletata (vezi nota Resend, pasul 2) | nu |
 | `APP_URL` | ex. `https://invitatie.vercel.app` (fara `/` la final); folosit in linkurile din emailuri | nu |
 
 `APP_URL` e optionala: daca lipseste, aplicatia foloseste adresa proiectului din Vercel. Lipsa oricarei variabile obligatorii opreste aplicatia cu eroarea `Variabile de mediu lipsa sau invalide` (vezi sectiunea 9).
@@ -329,7 +384,7 @@ Apoi:
 1. Deschide URL-ul aplicatiei -> ajungi la login.
 2. Logheaza-te ca el -> creeaza o invitatie pentru maine.
 3. Intr-o fereastra privata, logheaza-te ca ea -> badge "1" la Notificari -> deschide invitatia -> animatia cu inima -> deruleaza -> raspunde "Propun alta ora".
-4. Verifica emailul (`EMAIL_EL`): a venit notificarea (uita-te si in Spam).
+4. Verifica emailul la ambele adrese (`EMAIL_EL` si `EMAIL_EA`): a venit notificarea pentru cine a primit invitatia sau raspunsul (uita-te si in Spam).
 5. Ca el -> "Accept ora propusa" -> dashboard arata countdown.
 6. Parcurge si `docs/security-checklist.md`.
 
@@ -372,7 +427,10 @@ Apoi:
 | Testele de integrare apar "skipped" | lipseste `.env.test.local` | pasul 4.3 |
 | Login mereu "gresit" | username diferit de cel din env, parola gresita, sau blocat de rate limit | verifica `USER_.._NAME`; vezi mai jos |
 | "Prea multe incercari, incearca din nou peste 15 minute" | 5 incercari gresite de pe acelasi IP | asteapta 15 minute sau `USE dates; DELETE FROM login_attempts;` in TiDB SQL Editor |
-| Nu vine emailul | `EMAIL_EL` diferit de adresa contului Resend, sau Spam | Resend -> **Emails** arata fiecare trimitere si motivul erorii |
+| Nu vine emailul | emailurile sunt dezactivate (lipseste `GMAIL_USER` / `GMAIL_APP_PASSWORD`), adresa utilizatorului lipseste, sau Spam | ruleaza `npm run check:email`; verifica Spam; in Vercel Logs cauta `email_disabled` sau `email_failed` |
+| `check:email` arata `EAUTH` (in Logs: `"smtpCode":"EAUTH"`) | parola de aplicatie gresita, stearsa, sau verificarea in 2 pasi nu e activa | refa pasii 2.2 si 2.3, pune noul cod in `.env.local` si in Vercel, apoi Redeploy |
+| `check:email` arata `ECONNECTION` sau `ETIMEDOUT` | nu se poate conecta la `smtp.gmail.com:465` | verifica internetul; o retea de firma sau un firewall poate bloca portul 465; incearca de acasa |
+| `check:email` zice ca lipsesc `GMAIL_USER` / `GMAIL_APP_PASSWORD` | nu sunt completate in `.env.local` | pasul 2.4 (aplicatia merge si fara, doar ca nu trimite emailuri) |
 | Poza nu se incarca | `BLOB_READ_WRITE_TOKEN` provizoriu / gresit, sau store-ul e Public | ruleaza `npm run check:blob`; pune tokenul real de la store-ul Private (pasul 3.1) |
 | `check:blob` arata `FAIL  2. Cerere anonima refuzata` | store-ul Blob e Public (nu se poate schimba dupa creare) | sterge store-ul si creeaza-l ca **Private**, pune noul token in `.env.local` si in Vercel (pasul 3.1), apoi Redeploy |
 | `check:blob` arata `Vercel Blob: This store does not exist` sau o eroare de autentificare | tokenul e gresit, vechi (store sters) sau apartine altui store | copiaza din nou tokenul de la store-ul curent (pasul 3.1) |

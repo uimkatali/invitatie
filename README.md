@@ -6,7 +6,7 @@ Manager de dateuri pentru doi: invitatii cu raspuns (Da / Nu / Propun alta ora),
 
 ## Stack
 
-Next.js 16 (App Router, Server Actions) · TiDB Cloud (Drizzle, driver HTTP) · Resend · Vercel Blob (store privat) · three.js / React Three Fiber · Vitest · Playwright
+Next.js 16 (App Router, Server Actions) · TiDB Cloud (Drizzle, driver HTTP) · Gmail SMTP (nodemailer) · Vercel Blob (store privat) · three.js / React Three Fiber · Vitest · Playwright
 
 ## Pagini
 
@@ -36,6 +36,7 @@ npm run db:generate    # genereaza o migrare dupa ce modifici lib/db/schema.ts
 npm run db:migrate     # aplica migrarile pe baza din DATABASE_URL
 npm run hash-password  # hash pentru o parola noua (PowerShell / cmd; in Git Bash: winpty)
 npm run gen-secret     # SESSION_SECRET nou
+npm run check:email    # trimite un email de proba la adresele din .env.local (Gmail SMTP)
 npm run check:blob     # verifica store-ul Vercel Blob din .env.local: privat, citire autentificata, stergere
 ```
 

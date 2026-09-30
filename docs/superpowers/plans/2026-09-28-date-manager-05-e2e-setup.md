@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Nota (actualizare ulterioara):** stratul de email din acest plan (Resend) a fost inlocuit cu Gmail SMTP prin `nodemailer`, pentru ca sandbox-ul Resend trimite doar la proprietarul contului. Codul din repo (`lib/notifications/email.ts`, `lib/env.ts`, `SETUP.md`) este sursa de adevar; blocurile de cod despre email de mai jos sunt istorice si nu se mai aplica. Vezi abaterea 10 din `2026-09-28-date-manager-00-overview.md`.
+
 **Goal:** Teste Playwright pentru fluxurile principale si pentru controalele OWASP, configurarea de deploy (`vercel.json`, Dependabot), checklist de securitate, ghidul pas cu pas `SETUP.md` si README nou.
 
 **Architecture:** Playwright porneste un build de productie (`next start`) pe portul 3100, cu env de test: baza `dates_test`, useri si parole de test generate la pornire, Resend cu cheie invalida (emailul esueaza si e doar logat). Testele seed-uiesc direct in DB ce nu se poate crea prin UI (un date acceptat din trecut). Fiecare test primeste un IP propriu (`x-forwarded-for`) ca rate limit-ul sa nu se scurga intre teste.

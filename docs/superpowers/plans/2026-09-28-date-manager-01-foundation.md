@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Nota (actualizare ulterioara):** stratul de email din acest plan (Resend) a fost inlocuit cu Gmail SMTP prin `nodemailer`, pentru ca sandbox-ul Resend trimite doar la proprietarul contului. Codul din repo (`lib/notifications/email.ts`, `lib/env.ts`, `SETUP.md`) este sursa de adevar; blocurile de cod despre email de mai jos sunt istorice si nu se mai aplica. Vezi abaterea 10 din `2026-09-28-date-manager-00-overview.md`.
+
 **Goal:** Stergerea aplicatiei vechi si punerea fundatiei: env validat, schema TiDB + migrari, login / logout cu rate limit, CSP + headere de securitate, layout de baza.
 
 **Architecture:** Constante de domeniu in `lib/domain.ts` (fara dependente), schema Drizzle in `lib/db/schema.ts`, client HTTP TiDB in `lib/db/client.ts`. Auth impartit in functii pure (`password`, `credentials`, `session`, `rate-limit`) + un strat subtire server (`require-session`). `proxy.ts` genereaza nonce CSP si blocheaza rutele fara sesiune.

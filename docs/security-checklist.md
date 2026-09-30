@@ -15,6 +15,9 @@
 - [ ] Functiile ruleaza in `fra1` (setat in `vercel.json`; verifica Vercel -> Project -> Settings -> Functions)
 - [ ] Store-ul Vercel Blob e creat ca **Private** (nu se poate schimba dupa creare) si `npm run check:blob` afiseaza **PASS** la pasul "Cerere anonima refuzata" (cu tokenul store-ului din productie in `.env.local`, ca la deploy)
 - [ ] `BLOB_READ_WRITE_TOKEN` e secret: nu se logheaza, nu se afiseaza, nu se copiaza in chat
+- [ ] `GMAIL_APP_PASSWORD` e secret: doar in `.env.local` si in variabilele Vercel, niciodata in `.env.local.example`, in git sau in chat; daca a scapat, se sterge de pe https://myaccount.google.com/apppasswords si se creeaza alta
+- [ ] Contul Gmail expeditor are verificarea in 2 pasi activa, iar parola de aplicatie `dateuri` e singura creata pentru aplicatie
+- [ ] `npm run check:email` afiseaza PASS pentru fiecare adresa configurata
 - [ ] Baza `dates_test` e separata de `dates`; testele nu ating niciodata baza reala (au o garda pe numele bazei)
 
 ## Ce apara aplicatia (de stiut, nu de bifat)
@@ -26,6 +29,7 @@
 - **Upload:** `/api/blob-upload` cere sesiune, acelasi origin, `Content-Length` (411 fara), maxim 4 MB (413) si accepta doar imagini reale (JPEG, PNG, WebP; verificate dupa continut, nu dupa tipul declarat). Un user nu poate incarca in amintirea celuilalt.
 - **Headere:** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy` restrictiv, HSTS in productie, fara `X-Powered-By`.
 - **Continut utilizator:** afisat ca text (React), niciodata ca HTML; mesajele flash vin dintr-o lista fixa, nu din URL.
+- **Emailuri:** Gmail SMTP (TLS pe portul 465) cu parola de aplicatie; continutul e escape-uit, subiectul e pe un singur rand. Logurile de email contin doar tipul evenimentului si un cod scurt (`EAUTH`, `ECONNECTION`), niciodata adrese, parola sau continutul mesajului.
 - **Dependente:** Dependabot saptamanal + `npm audit --audit-level=high` in `npm run verify`.
 
 ## Verificare pe productie
