@@ -99,7 +99,8 @@ img { max-width: 100%; display: block; }
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
 }
 .app-header .logo { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; text-decoration: none; }
-.app-header nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.main-nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.menu-toggle { display: none; }
 .nav-link { text-decoration: none; padding: 6px 12px; border-radius: 999px; font-weight: 500; position: relative; }
 .nav-link:hover, .nav-link[aria-current='page'] { background: rgba(255, 255, 255, 0.8); }
 .badge {
@@ -159,8 +160,42 @@ fieldset { border: none; }
 
 @media (max-width: 640px) {
   .card { padding: 18px; }
-  .app-header { border-radius: 20px; }
+  .app-header { border-radius: 20px; flex-wrap: nowrap; }
+
+  /* Hamburger: 44x44px, trei liniute desenate din CSS */
+  .menu-toggle {
+    display: inline-grid; place-items: center; width: 44px; height: 44px; flex: none;
+    border: 1px solid var(--glass-border); border-radius: 999px; background: rgba(255, 255, 255, 0.7); cursor: pointer;
+  }
+  .menu-icon, .menu-icon::before, .menu-icon::after {
+    display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--ink); content: '';
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  .menu-icon { position: relative; }
+  .menu-icon::before { position: absolute; top: -6px; }
+  .menu-icon::after { position: absolute; top: 6px; }
+  .menu-toggle[aria-expanded='true'] .menu-icon { background: transparent; }
+  .menu-toggle[aria-expanded='true'] .menu-icon::before { transform: translateY(6px) rotate(45deg); }
+  .menu-toggle[aria-expanded='true'] .menu-icon::after { transform: translateY(-6px) rotate(-45deg); }
+
+  /* Panoul de linkuri: sub header, pe toata latimea, un link pe rand */
+  .main-nav {
+    display: none; position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 2px; padding: 8px;
+    /* Aproape opac: backdrop-filter nu estompeaza continutul cand e imbricat in headerul care il are deja */
+    background: #fff8fb; border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: var(--shadow);
+  }
+  .main-nav.is-open { display: flex; animation: nav-in 160ms ease; }
+  .main-nav .nav-link {
+    display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 14px;
+    border-radius: 14px; width: 100%; text-align: left;
+  }
+  .nav-logout { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(58, 37, 64, 0.12); }
+  .main-nav .btn-link { text-decoration: none; font-weight: 500; background: none; border: 0; cursor: pointer; }
+  .main-nav .nav-link:hover { background: rgba(255, 200, 221, 0.35); }
 }
+
+@keyframes nav-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
@@ -254,4 +289,32 @@ fieldset { border: none; }
 @media (prefers-reduced-motion: reduce) {
   .exp-section, .exp-line { opacity: 1 !important; transform: none !important; }
   .exp-scroll-hint { animation: none; }
+}
+
+/* Lightbox pentru poze */
+.photo-thumb { display: block; width: 100%; padding: 0; border: 0; border-radius: 14px; background: none; cursor: zoom-in; }
+.photo-thumb:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.lightbox {
+  width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  background: transparent; color: #fff;
+}
+.lightbox::backdrop { background: rgba(30, 18, 36, 0.95); }
+.lightbox-stage {
+  position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden;
+  touch-action: none; cursor: zoom-in;
+}
+.lightbox-stage.is-zoomed { cursor: grab; }
+.lightbox-img {
+  max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
+  transform-origin: center; will-change: transform; user-select: none; -webkit-user-select: none;
+}
+.lightbox-close {
+  position: absolute; z-index: 2; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right));
+  width: 44px; height: 44px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.92);
+  color: var(--ink); font-size: 1.6rem; line-height: 1; cursor: pointer;
+}
+.lightbox-close:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.lightbox-error { padding: 24px; text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-img { transition: none !important; }
 }

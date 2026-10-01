@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import AppHeader, { buildNav } from '@/components/AppHeader';
+import AppHeader from '@/components/AppHeader';
+import { buildNav } from '@/components/nav';
 import SceneRoot from '@/components/scene/SceneRoot';
 import { requireSession } from '@/lib/auth/require-session';
 import { displayName } from '@/lib/auth/display-names';
