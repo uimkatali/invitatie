@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { connect, type Connection } from '@tidbcloud/serverless';
+import { connect } from '@tidbcloud/serverless';
 import { hasTestDb } from '@/test/db';
 
 // TEMPORAR (Plan A, spike): afla cum trec datele binare prin driverul HTTP TiDB.
@@ -36,7 +36,7 @@ function asBytes(value: unknown): Uint8Array | null {
 }
 
 describe.skipIf(!hasTestDb)('spike: binare prin @tidbcloud/serverless', () => {
-  let conn: Connection;
+  let conn: ReturnType<typeof connect>;
 
   beforeAll(async () => {
     const url = new URL(process.env.TEST_DATABASE_URL as string);
