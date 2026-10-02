@@ -19,3 +19,8 @@ export function isActiveLink(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+/** Suma notificarilor necitite din toate linkurile (afisata pe butonul de meniu cand panoul e inchis). */
+export function totalUnread(items: NavItem[]): number {
+  return items.reduce((sum, item) => sum + (item.badge ?? 0), 0);
+}

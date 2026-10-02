@@ -11,22 +11,32 @@ interface PhotoGridProps {
   deletable: boolean;
 }
 
+interface OpenPhoto {
+  id: string;
+  trigger: HTMLElement;
+}
+
 export default function PhotoGrid({ photos, deletable }: PhotoGridProps) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [open, setOpen] = useState<OpenPhoto | null>(null);
   if (photos.length === 0) return null;
   return (
     <>
       <ul className="photo-grid">
-        {photos.map((photo) => (
+        {photos.map((photo, index) => (
           <li key={photo.id}>
-            <button type="button" className="photo-thumb" aria-label="Mareste poza" onClick={() => setOpenId(photo.id)}>
+            <button
+              type="button"
+              className="photo-thumb"
+              aria-label={`Mareste poza ${index + 1} din ${photos.length}`}
+              onClick={(event) => setOpen({ id: photo.id, trigger: event.currentTarget })}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element -- next/image nu trimite cookie-ul de sesiune */}
               <img
                 src={`/api/photos/${photo.id}`}
                 width={photo.width ?? undefined}
                 height={photo.height ?? undefined}
                 loading="lazy"
-                alt="Poza din amintire"
+                alt=""
               />
             </button>
             {deletable && (
@@ -40,7 +50,7 @@ export default function PhotoGrid({ photos, deletable }: PhotoGridProps) {
           </li>
         ))}
       </ul>
-      {openId && <PhotoLightbox photoId={openId} onClose={() => setOpenId(null)} />}
+      {open && <PhotoLightbox key={open.id} photoId={open.id} returnFocusTo={open.trigger} onClose={() => setOpen(null)} />}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildNav, isActiveLink } from './nav';
+import { buildNav, isActiveLink, totalUnread } from './nav';
 
 describe('buildNav', () => {
   it('puts the unread count on the notifications item only', () => {
@@ -22,5 +22,13 @@ describe('isActiveLink', () => {
     expect(isActiveLink('/calendarx', '/calendar')).toBe(false);
     expect(isActiveLink('/invitatii/noua', '/invitatii/noua')).toBe(true);
     expect(isActiveLink('/invitatii/abc', '/invitatii/noua')).toBe(false);
+  });
+});
+
+describe('totalUnread', () => {
+  it('sums the badges and is zero without any', () => {
+    expect(totalUnread(buildNav(3))).toBe(3);
+    expect(totalUnread(buildNav(0))).toBe(0);
+    expect(totalUnread([{ href: '/', label: 'Acasa' }])).toBe(0);
   });
 });
