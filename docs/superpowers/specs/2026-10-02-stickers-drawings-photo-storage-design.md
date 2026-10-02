@@ -76,6 +76,16 @@ Stickere + desene: maxim 60 pe ora per utilizator (numarat din `media.created_at
 ### 2.5 Driverul TiDB si binarele
 `@tidbcloud/serverless` trimite parametrii prin HTTP. Primul pas de implementare e o verificare (test de integrare pe `dates_test`): un buffer cu toti octetii 0-255 si unul de ~500 KB se scriu si se citesc identic. Daca driverul nu intoarce `Uint8Array`, se foloseste un `customType` cu conversie (ex. `HEX()`/`UNHEX()` sau base64) - decizia se ia pe baza testului, nu inainte.
 
+#### Rezultate spike (2026-10-02, `lib/db/binary.spike.int.test.ts`)
+| Varianta | 256 octeti | 500 KB | Scriere 500 KB | Citire 500 KB |
+|---|---|---|---|---|
+| A parametru Uint8Array / citire directa | PASS | PASS | 429 ms | 109 ms, intoarce `Uint8Array` |
+| B parametru Buffer / citire directa | PASS | PASS | similar A | intoarce `Uint8Array` |
+| C UNHEX(?) / HEX() | PASS | PASS | 162 ms | 73 ms (dar hex = 2x pe fir) |
+| D FROM_BASE64(?) / TO_BASE64() | PASS | PASS | 130 ms | 75 ms |
+
+Concluzie pentru Plan B: **scriere cu `FROM_BASE64(?)`** (parametru string base64; de ~3x mai rapida decat parametrul binar, pe care driverul il serializeaza ineficient) si **citire directa a coloanei** (driverul intoarce deja `Uint8Array`, fara conversie). Verificat si la 4 MB (marimea maxima a unei poze): scriere `FROM_BASE64` 1096 ms, citire directa 588 ms, octeti identici - limita de 4 MB ramane valabila si pentru pozele din TiDB.
+
 ## 3. Text cu stickere
 
 ### 3.1 Format salvat
